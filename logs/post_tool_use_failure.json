@@ -1,0 +1,91 @@
+[
+  {
+    "timestamp": "2026-02-25T16:09:44.068405",
+    "session_id": "11473b9f-d3da-4c3c-a193-9110e7dfbcfb",
+    "hook_event_name": "PostToolUseFailure",
+    "tool_name": "Read",
+    "tool_use_id": "toolu_01E3gpei7XobHG5omwSCQ3ff",
+    "tool_input": {
+      "file_path": "/Users/akinpound/Documents/cka-buddy/MEMORY.md"
+    },
+    "error": "File does not exist. Note: your current working directory is /Users/akinpound/Documents/cka-buddy.",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/11473b9f-d3da-4c3c-a193-9110e7dfbcfb.jsonl",
+    "raw_input": {
+      "session_id": "11473b9f-d3da-4c3c-a193-9110e7dfbcfb",
+      "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/11473b9f-d3da-4c3c-a193-9110e7dfbcfb.jsonl",
+      "cwd": "/Users/akinpound/Documents/cka-buddy",
+      "permission_mode": "default",
+      "hook_event_name": "PostToolUseFailure",
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "/Users/akinpound/Documents/cka-buddy/MEMORY.md"
+      },
+      "tool_use_id": "toolu_01E3gpei7XobHG5omwSCQ3ff",
+      "error": "File does not exist. Note: your current working directory is /Users/akinpound/Documents/cka-buddy.",
+      "is_interrupt": false,
+      "logged_at": "2026-02-25T16:09:44.068405"
+    }
+  },
+  {
+    "timestamp": "2026-02-25T17:18:37.258257",
+    "session_id": "1577d3a9-a064-4674-becd-523c39f524a7",
+    "hook_event_name": "PostToolUseFailure",
+    "tool_name": "Read",
+    "tool_use_id": "toolu_01AfyVUwNjHv7bPfLZkZrjcs",
+    "tool_input": {
+      "file_path": "/Users/akinpound/Documents/cka-buddy/rebels-in-the-sky/src/image"
+    },
+    "error": "EISDIR: illegal operation on a directory, read '/Users/akinpound/Documents/cka-buddy/rebels-in-the-sky/src/image'",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/1577d3a9-a064-4674-becd-523c39f524a7.jsonl",
+    "raw_input": {
+      "session_id": "1577d3a9-a064-4674-becd-523c39f524a7",
+      "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/1577d3a9-a064-4674-becd-523c39f524a7.jsonl",
+      "cwd": "/Users/akinpound/Documents/cka-buddy",
+      "permission_mode": "default",
+      "hook_event_name": "PostToolUseFailure",
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "/Users/akinpound/Documents/cka-buddy/rebels-in-the-sky/src/image"
+      },
+      "tool_use_id": "toolu_01AfyVUwNjHv7bPfLZkZrjcs",
+      "error": "EISDIR: illegal operation on a directory, read '/Users/akinpound/Documents/cka-buddy/rebels-in-the-sky/src/image'",
+      "is_interrupt": false,
+      "logged_at": "2026-02-25T17:18:37.258257"
+    }
+  },
+  {
+    "timestamp": "2026-02-25T18:03:23.909174",
+    "session_id": "ec846986-c581-4e68-93c8-9ab26ec047ad",
+    "hook_event_name": "PostToolUseFailure",
+    "tool_name": "Bash",
+    "tool_use_id": "toolu_01JGem7Goj3USPkSyZv4EVBy",
+    "tool_input": {
+      "command": "ls -la src/ui/ && echo \"---\" && grep -r \"layout::draw\" src/ && echo \"(empty = good)\" && echo \"---\" && grep -r \"UiStyle::\" src/ui/ | head -20",
+      "description": "Verify file structure and old references removed"
+    },
+    "error": "Exit code 1\ntotal 152\ndrwxr-xr-x@ 13 akinpound  staff    416 Feb 25 18:02 .\ndrwxr-xr-x@ 11 akinpound  staff    352 Feb 25 15:50 ..\n-rw-r--r--@  1 akinpound  staff   6336 Feb 25 17:54 big_numbers.rs\n-rw-r--r--@  1 akinpound  staff   2210 Feb 25 17:50 button.rs\n-rw-r--r--@  1 akinpound  staff   1924 Feb 25 17:49 constants.rs\n-rw-r--r--@  1 akinpound  staff  13917 Feb 25 18:02 learning_screen.rs\n-rw-r--r--@  1 akinpound  staff    190 Feb 25 18:02 mod.rs\n-rw-r--r--@  1 akinpound  staff  11619 Feb 25 17:55 popup.rs\n-rw-r--r--@  1 akinpound  staff   7217 Feb 25 17:50 splash_screen.rs\n-rw-r--r--@  1 akinpound  staff    503 Feb 25 17:49 traits.rs\n-rw-r--r--@  1 akinpound  staff    311 Feb 25 17:49 ui_action.rs\n-rw-r--r--@  1 akinpound  staff   2929 Feb 25 18:01 ui_screen.rs\n-rw-r--r--@  1 akinpound  staff   4832 Feb 25 17:54 widgets.rs\n---\n\ntotal 152\ndrwxr-xr-x@ 13 akinpound  staff    416 Feb 25 18:02 .\ndrwxr-xr-x@ 11 akinpound  staff    352 Feb 25 15:50 ..\n-rw-r--r--@  1 akinpound  staff   6336 Feb 25 17:54 big_numbers.rs\n-rw-r--r--@  1 akinpound  staff   2210 Feb 25 17:50 button.rs\n-rw-r--r--@  1 akinpound  staff   1924 Feb 25 17:49 constants.rs\n-rw-r--r--@  1 akinpound  staff  13917 Feb 25 18:02 learning_screen.rs\n-rw-r--r--@  1 akinpound  staff    190 Feb 25 18:02 mod.rs\n-rw-r--r--@  1 akinpound  staff  11619 Feb 25 17:55 popup.rs\n-rw-r--r--@  1 akinpound  staff   7217 Feb 25 17:50 splash_screen.rs\n-rw-r--r--@  1 akinpound  staff    503 Feb 25 17:49 traits.rs\n-rw-r--r--@  1 akinpound  staff    311 Feb 25 17:49 ui_action.rs\n-rw-r--r--@  1 akinpound  staff   2929 Feb 25 18:01 ui_screen.rs\n-rw-r--r--@  1 akinpound  staff   4832 Feb 25 17:54 widgets.rs\n---",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "acceptEdits",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/ec846986-c581-4e68-93c8-9ab26ec047ad.jsonl",
+    "raw_input": {
+      "session_id": "ec846986-c581-4e68-93c8-9ab26ec047ad",
+      "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/ec846986-c581-4e68-93c8-9ab26ec047ad.jsonl",
+      "cwd": "/Users/akinpound/Documents/cka-buddy",
+      "permission_mode": "acceptEdits",
+      "hook_event_name": "PostToolUseFailure",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "ls -la src/ui/ && echo \"---\" && grep -r \"layout::draw\" src/ && echo \"(empty = good)\" && echo \"---\" && grep -r \"UiStyle::\" src/ui/ | head -20",
+        "description": "Verify file structure and old references removed"
+      },
+      "tool_use_id": "toolu_01JGem7Goj3USPkSyZv4EVBy",
+      "error": "Exit code 1\ntotal 152\ndrwxr-xr-x@ 13 akinpound  staff    416 Feb 25 18:02 .\ndrwxr-xr-x@ 11 akinpound  staff    352 Feb 25 15:50 ..\n-rw-r--r--@  1 akinpound  staff   6336 Feb 25 17:54 big_numbers.rs\n-rw-r--r--@  1 akinpound  staff   2210 Feb 25 17:50 button.rs\n-rw-r--r--@  1 akinpound  staff   1924 Feb 25 17:49 constants.rs\n-rw-r--r--@  1 akinpound  staff  13917 Feb 25 18:02 learning_screen.rs\n-rw-r--r--@  1 akinpound  staff    190 Feb 25 18:02 mod.rs\n-rw-r--r--@  1 akinpound  staff  11619 Feb 25 17:55 popup.rs\n-rw-r--r--@  1 akinpound  staff   7217 Feb 25 17:50 splash_screen.rs\n-rw-r--r--@  1 akinpound  staff    503 Feb 25 17:49 traits.rs\n-rw-r--r--@  1 akinpound  staff    311 Feb 25 17:49 ui_action.rs\n-rw-r--r--@  1 akinpound  staff   2929 Feb 25 18:01 ui_screen.rs\n-rw-r--r--@  1 akinpound  staff   4832 Feb 25 17:54 widgets.rs\n---\n\ntotal 152\ndrwxr-xr-x@ 13 akinpound  staff    416 Feb 25 18:02 .\ndrwxr-xr-x@ 11 akinpound  staff    352 Feb 25 15:50 ..\n-rw-r--r--@  1 akinpound  staff   6336 Feb 25 17:54 big_numbers.rs\n-rw-r--r--@  1 akinpound  staff   2210 Feb 25 17:50 button.rs\n-rw-r--r--@  1 akinpound  staff   1924 Feb 25 17:49 constants.rs\n-rw-r--r--@  1 akinpound  staff  13917 Feb 25 18:02 learning_screen.rs\n-rw-r--r--@  1 akinpound  staff    190 Feb 25 18:02 mod.rs\n-rw-r--r--@  1 akinpound  staff  11619 Feb 25 17:55 popup.rs\n-rw-r--r--@  1 akinpound  staff   7217 Feb 25 17:50 splash_screen.rs\n-rw-r--r--@  1 akinpound  staff    503 Feb 25 17:49 traits.rs\n-rw-r--r--@  1 akinpound  staff    311 Feb 25 17:49 ui_action.rs\n-rw-r--r--@  1 akinpound  staff   2929 Feb 25 18:01 ui_screen.rs\n-rw-r--r--@  1 akinpound  staff   4832 Feb 25 17:54 widgets.rs\n---",
+      "is_interrupt": false,
+      "logged_at": "2026-02-25T18:03:23.909174"
+    }
+  }
+]

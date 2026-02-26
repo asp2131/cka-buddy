@@ -1,0 +1,25 @@
+[
+  {
+    "session_id": "11473b9f-d3da-4c3c-a193-9110e7dfbcfb",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/11473b9f-d3da-4c3c-a193-9110e7dfbcfb.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SessionStart",
+    "source": "startup",
+    "model": "claude-sonnet-4-6"
+  },
+  {
+    "session_id": "1577d3a9-a064-4674-becd-523c39f524a7",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/1577d3a9-a064-4674-becd-523c39f524a7.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SessionStart",
+    "source": "startup",
+    "model": "claude-sonnet-4-6"
+  },
+  {
+    "session_id": "ec846986-c581-4e68-93c8-9ab26ec047ad",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/ec846986-c581-4e68-93c8-9ab26ec047ad.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SessionStart",
+    "source": "clear"
+  }
+]

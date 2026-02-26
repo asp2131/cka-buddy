@@ -1,0 +1,47 @@
+[
+  {
+    "session_id": "11473b9f-d3da-4c3c-a193-9110e7dfbcfb",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/11473b9f-d3da-4c3c-a193-9110e7dfbcfb.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "a282eece383c71f91",
+    "agent_type": "Explore",
+    "logged_at": "2026-02-25T16:09:54.407211"
+  },
+  {
+    "session_id": "11473b9f-d3da-4c3c-a193-9110e7dfbcfb",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/11473b9f-d3da-4c3c-a193-9110e7dfbcfb.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "a645c505a6a901600",
+    "agent_type": "Explore",
+    "logged_at": "2026-02-25T16:14:56.320662"
+  },
+  {
+    "session_id": "1577d3a9-a064-4674-becd-523c39f524a7",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/1577d3a9-a064-4674-becd-523c39f524a7.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "af4a5e4c13f90b637",
+    "agent_type": "Explore",
+    "logged_at": "2026-02-25T17:18:00.388669"
+  },
+  {
+    "session_id": "1577d3a9-a064-4674-becd-523c39f524a7",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/1577d3a9-a064-4674-becd-523c39f524a7.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "a858b89759fb82cc2",
+    "agent_type": "Explore",
+    "logged_at": "2026-02-25T17:18:02.932128"
+  },
+  {
+    "session_id": "1577d3a9-a064-4674-becd-523c39f524a7",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/1577d3a9-a064-4674-becd-523c39f524a7.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "aae2f6bc38d56ff28",
+    "agent_type": "Plan",
+    "logged_at": "2026-02-25T17:21:21.440855"
+  }
+]
