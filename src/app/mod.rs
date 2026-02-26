@@ -21,7 +21,7 @@ use crate::content::loader::load_steps_from_root;
 use crate::progress::store::ProgressStore;
 use crate::terminal::guard::{GuardDecision, evaluate_command};
 use crate::terminal::pty::PtySession;
-use crate::terminal::shell_mode::{ShellMode, ShellRouter};
+use crate::terminal::shell_mode::{ShellMode, ShellRouter, run_shell_connector};
 use crate::ui::popup::PopupMessage;
 use crate::ui::ui_action::UiAction;
 use crate::ui::ui_screen::{ScreenState, UiScreen};
@@ -32,6 +32,10 @@ pub fn run() -> Result<()> {
 }
 
 pub fn run_with_args(args: Vec<String>) -> Result<()> {
+    if let Some((pin, port)) = parse_shell_connect_args(&args)? {
+        return run_shell_connector(&pin, port);
+    }
+
     let steps = load_steps_from_root(Path::new("docs/cka-app-content"))?;
     let store = ProgressStore::default()?;
     let progress = store.load()?;
@@ -53,6 +57,13 @@ pub fn run_with_args(args: Vec<String>) -> Result<()> {
     );
 
     let mut ui = UiScreen::new(initial_status, has_progress);
+    if let Some(connect_cmd) = shell.external_connect_command() {
+        ui.learning
+            .output_log
+            .push(format!("External shell pairing command: {connect_cmd}"));
+        ui.learning.status =
+            "External shell mode: run pairing command in another terminal".to_string();
+    }
 
     let mut terminal = setup_terminal()?;
     let result = run_loop(
@@ -270,6 +281,13 @@ fn run_loop(
                         "Shell mode switch: now using {} runner",
                         parsed.as_str()
                     ));
+                    if parsed == ShellMode::External {
+                        if let Some(connect_cmd) = shell.external_connect_command() {
+                            ui.learning
+                                .output_log
+                                .push(format!("External shell pairing command: {connect_cmd}"));
+                        }
+                    }
                 }
                 None => {
                     ui.learning.status =
@@ -283,21 +301,7 @@ fn run_loop(
                 engine.record_attempt();
                 match evaluate_command(&raw_cmd) {
                     GuardDecision::Allow => {
-                        let dispatch = if shell.mode() == ShellMode::External {
-                            suspend_terminal(terminal)?;
-                            let send_result = shell.send_line(&raw_cmd);
-                            let resume_result = resume_terminal(terminal);
-                            match (send_result, resume_result) {
-                                (Ok(dispatch), Ok(())) => Ok(dispatch),
-                                (Err(err), Ok(())) => Err(err),
-                                (Ok(_), Err(err)) => Err(err),
-                                (Err(send_err), Err(resume_err)) => Err(anyhow::anyhow!(
-                                    "shell dispatch failed: {send_err}; terminal resume failed: {resume_err}"
-                                )),
-                            }
-                        } else {
-                            shell.send_line(&raw_cmd)
-                        }?;
+                        let dispatch = shell.send_line(&raw_cmd)?;
                         ui.learning.status =
                             format!("Ran [{}]: {}", shell.mode().as_str(), raw_cmd);
                         ui.learning.output_log.push(dispatch);
@@ -317,21 +321,7 @@ fn run_loop(
                 engine.record_attempt();
                 match evaluate_command(&raw_cmd) {
                     GuardDecision::Allow | GuardDecision::Confirm(_) => {
-                        let dispatch = if shell.mode() == ShellMode::External {
-                            suspend_terminal(terminal)?;
-                            let send_result = shell.send_line(&raw_cmd);
-                            let resume_result = resume_terminal(terminal);
-                            match (send_result, resume_result) {
-                                (Ok(dispatch), Ok(())) => Ok(dispatch),
-                                (Err(err), Ok(())) => Err(err),
-                                (Ok(_), Err(err)) => Err(err),
-                                (Err(send_err), Err(resume_err)) => Err(anyhow::anyhow!(
-                                    "shell dispatch failed: {send_err}; terminal resume failed: {resume_err}"
-                                )),
-                            }
-                        } else {
-                            shell.send_line(&raw_cmd)
-                        }?;
+                        let dispatch = shell.send_line(&raw_cmd)?;
                         ui.learning.status =
                             format!("Forced run [{}]: {}", shell.mode().as_str(), raw_cmd);
                         ui.learning.output_log.push(dispatch);
@@ -348,6 +338,44 @@ fn run_loop(
     }
 
     Ok(())
+}
+
+fn parse_shell_connect_args(args: &[String]) -> Result<Option<(String, u16)>> {
+    let mut pin: Option<String> = None;
+    let mut port: Option<u16> = None;
+
+    let mut idx = 0;
+    while idx < args.len() {
+        match args[idx].as_str() {
+            "--shell-connect" => {
+                let Some(value) = args.get(idx + 1) else {
+                    anyhow::bail!("missing value for --shell-connect (expected 4-digit pin)");
+                };
+                pin = Some(value.clone());
+                idx += 1;
+            }
+            "--port" => {
+                let Some(value) = args.get(idx + 1) else {
+                    anyhow::bail!("missing value for --port");
+                };
+                port = Some(
+                    value
+                        .parse::<u16>()
+                        .map_err(|_| anyhow::anyhow!("invalid --port value '{value}'"))?,
+                );
+                idx += 1;
+            }
+            _ => {}
+        }
+        idx += 1;
+    }
+
+    match (pin, port) {
+        (Some(pin), Some(port)) => Ok(Some((pin, port))),
+        (None, None) => Ok(None),
+        (Some(_), None) => anyhow::bail!("--shell-connect requires --port"),
+        (None, Some(_)) => anyhow::bail!("--port provided without --shell-connect"),
+    }
 }
 
 fn parse_shell_mode(args: &[String]) -> Result<ShellMode> {
@@ -397,21 +425,6 @@ fn setup_terminal() -> Result<Terminal<CrosstermBackend<Stdout>>> {
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
     Ok(terminal)
-}
-
-fn suspend_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-    terminal.show_cursor()?;
-    Ok(())
-}
-
-fn resume_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
-    enable_raw_mode()?;
-    execute!(terminal.backend_mut(), EnterAlternateScreen)?;
-    terminal.hide_cursor()?;
-    terminal.clear()?;
-    Ok(())
 }
 
 fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {

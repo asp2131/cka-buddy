@@ -47,7 +47,7 @@ impl PopupMessage {
                 ("/help", "Show this help overlay"),
                 ("/shell", "Show current shell mode"),
                 ("/shell embedded", "Use embedded PTY runner"),
-                ("/shell external", "Run commands in external terminal"),
+                ("/shell external", "Pair to one external terminal via PIN command"),
                 ("/quit", "Save progress and exit"),
                 ("Ctrl+C", "Quick quit from anywhere"),
             ],
