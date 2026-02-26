@@ -396,7 +396,7 @@ fn parse_shell_mode(args: &[String]) -> Result<ShellMode> {
         idx += 1;
     }
 
-    Ok(ShellMode::Embedded)
+    Ok(ShellMode::External)
 }
 
 fn parse_terminal_override(args: &[String]) -> Option<String> {
@@ -407,6 +407,28 @@ fn parse_terminal_override(args: &[String]) -> Option<String> {
         }
         idx += 1;
     }
+
+    parse_positional_terminal(args)
+}
+
+fn parse_positional_terminal(args: &[String]) -> Option<String> {
+    let mut skip_next = false;
+
+    for arg in args {
+        if skip_next {
+            skip_next = false;
+            continue;
+        }
+
+        match arg.as_str() {
+            "--shell" | "--terminal" | "--shell-connect" | "--port" => {
+                skip_next = true;
+            }
+            value if value.starts_with('-') => {}
+            value => return Some(value.to_string()),
+        }
+    }
+
     None
 }
 
