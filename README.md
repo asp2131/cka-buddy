@@ -8,6 +8,17 @@ It gives you:
 - persistent progress,
 - and a TUI control plane while you run real shell commands in a paired terminal.
 
+## Screenshots
+
+### Splash
+
+![CKA Buddy Splash](images/splash.png)
+
+### Learning UI
+
+![CKA Buddy Learning Screen 1](images/tui-image1.png)
+![CKA Buddy Learning Screen 2](images/tui-image2.png)
+
 ---
 
 ## Default workflow (new)
