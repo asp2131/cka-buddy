@@ -1,4 +1,19 @@
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::{
+    layout::Rect,
+    style::{Color, Modifier, Style},
+};
+
+pub const CANONICAL_VIEWPORT_WIDTH: u16 = 160;
+pub const CANONICAL_VIEWPORT_HEIGHT: u16 = 48;
+
+pub fn centered_clamped_viewport(area: Rect) -> Rect {
+    let width = area.width.min(CANONICAL_VIEWPORT_WIDTH);
+    let height = area.height.min(CANONICAL_VIEWPORT_HEIGHT);
+    let x = area.x + area.width.saturating_sub(width) / 2;
+    let y = area.y + area.height.saturating_sub(height) / 2;
+
+    Rect::new(x, y, width, height)
+}
 
 pub struct UiStyle;
 

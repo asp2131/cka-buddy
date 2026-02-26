@@ -62,7 +62,7 @@ pub fn load_steps_from_root(root: &Path) -> Result<Vec<Step>> {
         steps.extend(parse_steps_from_doc(&path, &raw)?);
     }
 
-    steps.sort_by(|a, b| a.id.cmp(&b.id));
+    steps.sort_by_key(curriculum_sort_key);
     if steps.is_empty() {
         return Err(anyhow!("no runnable steps found under {}", root.display()));
     }
@@ -340,4 +340,44 @@ fn extract_backtick_commands(input: &str) -> Vec<String> {
         .filter_map(|caps| caps.get(1).map(|m| m.as_str().trim().to_string()))
         .filter(|s| !s.is_empty())
         .collect()
+}
+
+fn curriculum_sort_key(step: &Step) -> (u8, String, u32, String) {
+    let area_rank = step
+        .path
+        .parent()
+        .and_then(|p| p.file_name())
+        .and_then(|name| name.to_str())
+        .map(|dir| match dir {
+            "projects" => 0,
+            "bugs" => 1,
+            "exam" => 2,
+            _ => 3,
+        })
+        .unwrap_or(4);
+
+    let file_name = step
+        .path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default()
+        .to_string();
+
+    let step_number = extract_step_number(&step.id).unwrap_or(u32::MAX);
+
+    (area_rank, file_name, step_number, step.id.clone())
+}
+
+fn extract_step_number(id: &str) -> Option<u32> {
+    let (_, suffix) = id.rsplit_once("-s")?;
+    let digits = suffix
+        .chars()
+        .take_while(|ch| ch.is_ascii_digit())
+        .collect::<String>();
+
+    if digits.is_empty() {
+        None
+    } else {
+        digits.parse::<u32>().ok()
+    }
 }

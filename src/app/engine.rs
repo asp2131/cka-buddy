@@ -101,4 +101,11 @@ impl Engine {
             self.progress.active_step_id = Some(self.current_step().id.clone());
         }
     }
+
+    pub fn reset_progress(&mut self) {
+        self.progress = ProgressState::default();
+        self.current_index = 0;
+        self.readiness = calculate_readiness(&self.steps, &self.progress);
+        self.progress.active_step_id = Some(self.current_step().id.clone());
+    }
 }

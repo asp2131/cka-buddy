@@ -35,6 +35,7 @@ impl PopupMessage {
     pub fn help() -> Self {
         Self::Help {
             commands: vec![
+                ("/new", "Reset progress and restart from Project 00"),
                 ("/next", "Go to the next step"),
                 ("/prev", "Go to the previous step"),
                 ("/back", "Jump to last completed step"),
@@ -44,7 +45,11 @@ impl PopupMessage {
                 ("/suggest [n]", "Load a suggested command"),
                 ("/clear", "Clear the terminal output"),
                 ("/help", "Show this help overlay"),
+                ("/shell", "Show current shell mode"),
+                ("/shell embedded", "Use embedded PTY runner"),
+                ("/shell external", "Run commands in external terminal"),
                 ("/quit", "Save progress and exit"),
+                ("Ctrl+C", "Quick quit from anywhere"),
             ],
         }
     }
@@ -58,10 +63,13 @@ impl PopupMessage {
                     "Welcome to CKA Buddy".to_string(),
                     vec![
                         "CKA Buddy is an interactive Kubernetes exam preparation tool.".to_string(),
-                        "It guides you through hands-on exercises that mirror the CKA exam.".to_string(),
+                        "It guides you through hands-on exercises that mirror the CKA exam."
+                            .to_string(),
                         "".to_string(),
-                        "You'll work with a real terminal — run kubectl commands directly.".to_string(),
-                        "Each step has an objective, suggested commands, and verification.".to_string(),
+                        "You'll work with a real terminal — run kubectl commands directly."
+                            .to_string(),
+                        "Each step has an objective, suggested commands, and verification."
+                            .to_string(),
                     ],
                 ),
                 (
@@ -75,6 +83,7 @@ impl PopupMessage {
                         "/suggest [n]     — Load a suggested command".to_string(),
                         "/clear           — Clear terminal output".to_string(),
                         "/help            — Show command reference".to_string(),
+                        "/new             — Reset progress and restart".to_string(),
                         "/quit            — Save and exit".to_string(),
                         "".to_string(),
                         "Or type any kubectl command directly to execute it.".to_string(),
@@ -84,11 +93,14 @@ impl PopupMessage {
                     "Interface Guide".to_string(),
                     vec![
                         "Header:     Shows readiness %, step info, and progress bar".to_string(),
-                        "Step Panel: Objective, domains, difficulty, and suggested commands".to_string(),
+                        "Step Panel: Objective, domains, difficulty, and suggested commands"
+                            .to_string(),
                         "Terminal:   Live output from your kubectl commands".to_string(),
-                        "Command Bar: Type commands here. Slash commands for navigation.".to_string(),
+                        "Command Bar: Type commands here. Slash commands for navigation."
+                            .to_string(),
                         "".to_string(),
-                        "Wide terminals (120+ cols) show an Activity Rail on the right.".to_string(),
+                        "Wide terminals (120+ cols) show an Activity Rail on the right."
+                            .to_string(),
                         "Your progress is saved automatically.".to_string(),
                     ],
                 ),
@@ -282,10 +294,7 @@ fn render_verify_fail(frame: &mut Frame, area: Rect, message: &str) {
     frame.render_widget(
         Paragraph::new(vec![
             Line::from(""),
-            Line::from(Span::styled(
-                format!("  {message}"),
-                UiStyle::TEXT_PRIMARY,
-            )),
+            Line::from(Span::styled(format!("  {message}"), UiStyle::TEXT_PRIMARY)),
             Line::from(""),
             Line::from(Span::styled(
                 "  Review the step objective and try again.",
@@ -326,10 +335,7 @@ fn render_tutorial(
                 format!(" {title} "),
                 UiStyle::HEADER.add_modifier(Modifier::BOLD),
             ),
-            Span::styled(
-                format!("[{}/{}]", page + 1, total_pages),
-                UiStyle::MUTED,
-            ),
+            Span::styled(format!("[{}/{}]", page + 1, total_pages), UiStyle::MUTED),
         ]);
         frame.render_widget(Paragraph::new(header).centered(), chunks[0]);
     }
@@ -339,10 +345,7 @@ fn render_tutorial(
             .iter()
             .map(|s| Line::from(Span::styled(format!("  {s}"), UiStyle::TEXT_PRIMARY)))
             .collect();
-        frame.render_widget(
-            Paragraph::new(lines).wrap(Wrap { trim: true }),
-            chunks[1],
-        );
+        frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), chunks[1]);
     }
 
     let nav_hint = if page + 1 >= total_pages {

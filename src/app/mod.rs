@@ -21,30 +21,48 @@ use crate::content::loader::load_steps_from_root;
 use crate::progress::store::ProgressStore;
 use crate::terminal::guard::{GuardDecision, evaluate_command};
 use crate::terminal::pty::PtySession;
+use crate::terminal::shell_mode::{ShellMode, ShellRouter};
 use crate::ui::popup::PopupMessage;
 use crate::ui::ui_action::UiAction;
 use crate::ui::ui_screen::{ScreenState, UiScreen};
 use crate::verify::checks::{VerifyOutcome, run_verify};
 
 pub fn run() -> Result<()> {
+    run_with_args(std::env::args().skip(1).collect())
+}
+
+pub fn run_with_args(args: Vec<String>) -> Result<()> {
     let steps = load_steps_from_root(Path::new("docs/cka-app-content"))?;
     let store = ProgressStore::default()?;
     let progress = store.load()?;
     let has_progress = !progress.completed.is_empty();
     let mut engine = Engine::new(steps, progress);
-    let mut pty = PtySession::start("/bin/zsh")?;
+    let pty = PtySession::start("/bin/zsh")?;
+    let mut shell = ShellRouter::new(
+        parse_shell_mode(&args)?,
+        pty,
+        parse_terminal_override(&args),
+    );
     let coach = build_coach();
 
     let initial_status = format!(
-        "Loaded {} steps. Use /help. Progress file: {}",
+        "Loaded {} steps. Shell={} Use /help. Progress file: {}",
         engine.steps.len(),
+        shell.mode().as_str(),
         store.path().display()
     );
 
     let mut ui = UiScreen::new(initial_status, has_progress);
 
     let mut terminal = setup_terminal()?;
-    let result = run_loop(&mut terminal, &mut engine, &mut pty, &store, coach.as_ref(), &mut ui);
+    let result = run_loop(
+        &mut terminal,
+        &mut engine,
+        &mut shell,
+        &store,
+        coach.as_ref(),
+        &mut ui,
+    );
     restore_terminal(&mut terminal)?;
     result
 }
@@ -52,14 +70,14 @@ pub fn run() -> Result<()> {
 fn run_loop(
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     engine: &mut Engine,
-    pty: &mut PtySession,
+    shell: &mut ShellRouter,
     store: &ProgressStore,
     coach: &(dyn crate::coach::CoachAdvisor + Send + Sync),
     ui: &mut UiScreen,
 ) -> Result<()> {
     loop {
         if ui.state == ScreenState::Learning {
-            ui.learning.output_log.extend(pty.drain_output());
+            ui.learning.output_log.extend(shell.drain_output());
             trim_output(&mut ui.learning.output_log, 200);
         }
 
@@ -94,6 +112,18 @@ fn run_loop(
             UiAction::StartSession => {
                 ui.transition_to_learning();
             }
+            UiAction::NewSession => {
+                engine.reset_progress();
+                store.save(&engine.progress)?;
+                ui.learning.command_input.clear();
+                ui.learning.hint_message = None;
+                ui.learning.completion_card = None;
+                ui.learning.tab_index = 0;
+                ui.learning.status = format!("Started new session at {}", engine.current_step().id);
+                ui.learning
+                    .output_log
+                    .push("Started a new session. Progress has been reset.".to_string());
+            }
             UiAction::NextStep => {
                 engine.next_step();
                 store.save(&engine.progress)?;
@@ -121,98 +151,91 @@ fn run_loop(
             UiAction::JumpRecommended => {
                 engine.jump_recommended();
                 store.save(&engine.progress)?;
-                ui.learning.status =
-                    format!("Recommended next: {}", engine.current_step().id);
+                ui.learning.status = format!("Recommended next: {}", engine.current_step().id);
                 ui.learning.hint_message = None;
                 ui.learning.completion_card = None;
                 ui.learning.tab_index = 0;
             }
-            UiAction::Verify => {
-                match run_verify(engine.current_step())? {
-                    VerifyOutcome::Pass => {
-                        let readiness_before = engine.readiness;
-                        let finished = engine.current_step().clone();
-                        let finished_id = engine.current_step().id.clone();
-                        engine.complete_current();
-                        store.save(&engine.progress)?;
-                        let readiness_after = engine.readiness;
+            UiAction::Verify => match run_verify(engine.current_step())? {
+                VerifyOutcome::Pass => {
+                    let readiness_before = engine.readiness;
+                    let finished = engine.current_step().clone();
+                    let finished_id = engine.current_step().id.clone();
+                    engine.complete_current();
+                    store.save(&engine.progress)?;
+                    let readiness_after = engine.readiness;
 
-                        let next_commands = engine
+                    let next_commands = engine
+                        .current_step()
+                        .run_commands
+                        .iter()
+                        .take(2)
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    let what_changed = if finished.what_changed.is_empty() {
+                        vec!["Deterministic checks passed".to_string()]
+                    } else {
+                        finished.what_changed.into_iter().take(2).collect()
+                    };
+
+                    ui.push_popup(PopupMessage::StepComplete {
+                        title: format!("{} complete.", finished.title),
+                        what_changed: what_changed.clone(),
+                        next_commands: next_commands.clone(),
+                        readiness_before,
+                        readiness_after,
+                    });
+
+                    ui.learning.completion_card = Some(CompletionCard {
+                        done: format!("{} complete.", finished.title),
+                        what_changed,
+                        next_commands,
+                        verify_optional: engine
                             .current_step()
-                            .run_commands
+                            .verify_commands
                             .iter()
                             .take(2)
                             .cloned()
-                            .collect::<Vec<_>>();
-                        let what_changed = if finished.what_changed.is_empty() {
-                            vec!["Deterministic checks passed".to_string()]
-                        } else {
-                            finished.what_changed.into_iter().take(2).collect()
-                        };
-
-                        ui.push_popup(PopupMessage::StepComplete {
-                            title: format!("{} complete.", finished.title),
-                            what_changed: what_changed.clone(),
-                            next_commands: next_commands.clone(),
-                            readiness_before,
-                            readiness_after,
-                        });
-
-                        ui.learning.completion_card = Some(CompletionCard {
-                            done: format!("{} complete.", finished.title),
-                            what_changed,
-                            next_commands,
-                            verify_optional: engine
-                                .current_step()
-                                .verify_commands
-                                .iter()
-                                .take(2)
-                                .cloned()
-                                .collect(),
-                        });
-                        ui.learning.status = format!(
-                            "Done: {} verified. Next: {}",
-                            finished_id,
-                            engine.current_step().id
-                        );
-                        ui.learning.hint_message = None;
-                        ui.learning.tab_index = 0;
-                    }
-                    VerifyOutcome::NoChecks => {
-                        ui.learning.status =
-                            "No verify commands defined for this step. Use docs output."
-                                .to_string();
-                        ui.learning.hint_message = None;
-                        ui.learning.completion_card = None;
-                        ui.learning.tab_index = 0;
-                    }
-                    VerifyOutcome::Fail(msg) => {
-                        ui.push_popup(PopupMessage::VerifyFail {
-                            message: msg.clone(),
-                        });
-                        ui.learning.status = format!("Not yet: {}", msg);
-                        ui.learning.hint_message = None;
-                        ui.learning.completion_card = None;
-                        ui.learning.tab_index = 0;
-                    }
+                            .collect(),
+                    });
+                    ui.learning.status = format!(
+                        "Done: {} verified. Next: {}",
+                        finished_id,
+                        engine.current_step().id
+                    );
+                    ui.learning.hint_message = None;
+                    ui.learning.tab_index = 0;
                 }
-            }
+                VerifyOutcome::NoChecks => {
+                    ui.learning.status =
+                        "No verify commands defined for this step. Use docs output.".to_string();
+                    ui.learning.hint_message = None;
+                    ui.learning.completion_card = None;
+                    ui.learning.tab_index = 0;
+                }
+                VerifyOutcome::Fail(msg) => {
+                    ui.push_popup(PopupMessage::VerifyFail {
+                        message: msg.clone(),
+                    });
+                    ui.learning.status = format!("Not yet: {}", msg);
+                    ui.learning.hint_message = None;
+                    ui.learning.completion_card = None;
+                    ui.learning.tab_index = 0;
+                }
+            },
             UiAction::Hint => {
-                ui.learning.hint_message = Some(
-                    coach.hint(engine.current_step(), &ui.learning.output_log),
-                );
+                ui.learning.hint_message =
+                    Some(coach.hint(engine.current_step(), &ui.learning.output_log));
                 ui.learning.status = "Hint generated for current step.".to_string();
             }
             UiAction::Suggest(index) => {
                 let cmds = &engine.current_step().run_commands;
                 if cmds.is_empty() {
-                    ui.learning.status =
-                        "No suggested run commands for this step.".to_string();
+                    ui.learning.status = "No suggested run commands for this step.".to_string();
                 } else if let Some(idx) = index {
                     if idx >= 1 && idx <= cmds.len() {
                         ui.learning.command_input = cmds[idx - 1].clone();
-                        ui.learning.status =
-                            format!("Loaded suggestion {}/{}.", idx, cmds.len());
+                        ui.learning.status = format!("Loaded suggestion {}/{}.", idx, cmds.len());
                         ui.learning.tab_index = idx % cmds.len();
                     } else {
                         ui.learning.status =
@@ -228,14 +251,31 @@ fn run_loop(
             }
             UiAction::ClearLog => {
                 ui.learning.output_log.clear();
-                ui.learning.output_log.push(
-                    "Terminal log cleared. Type /help for available commands.".to_string(),
-                );
+                ui.learning
+                    .output_log
+                    .push("Terminal log cleared. Type /help for available commands.".to_string());
                 ui.learning.status = "Cleared terminal output feed.".to_string();
             }
             UiAction::ShowHelp => {
                 ui.push_popup(PopupMessage::help());
             }
+            UiAction::ShowShellMode => {
+                ui.learning.status = format!("Shell mode: {}", shell.mode().as_str());
+            }
+            UiAction::SetShellMode(mode) => match ShellMode::parse(&mode) {
+                Some(parsed) => {
+                    shell.set_mode(parsed);
+                    ui.learning.status = format!("Shell mode switched to {}", parsed.as_str());
+                    ui.learning.output_log.push(format!(
+                        "Shell mode switch: now using {} runner",
+                        parsed.as_str()
+                    ));
+                }
+                None => {
+                    ui.learning.status =
+                        "Unknown shell mode. Use /shell embedded or /shell external".to_string();
+                }
+            },
             UiAction::DismissPopup => {
                 ui.dismiss_popup();
             }
@@ -243,12 +283,27 @@ fn run_loop(
                 engine.record_attempt();
                 match evaluate_command(&raw_cmd) {
                     GuardDecision::Allow => {
-                        pty.send_line(&raw_cmd)?;
-                        ui.learning.status = format!("Ran: {}", raw_cmd);
+                        let dispatch = if shell.mode() == ShellMode::External {
+                            suspend_terminal(terminal)?;
+                            let send_result = shell.send_line(&raw_cmd);
+                            let resume_result = resume_terminal(terminal);
+                            match (send_result, resume_result) {
+                                (Ok(dispatch), Ok(())) => Ok(dispatch),
+                                (Err(err), Ok(())) => Err(err),
+                                (Ok(_), Err(err)) => Err(err),
+                                (Err(send_err), Err(resume_err)) => Err(anyhow::anyhow!(
+                                    "shell dispatch failed: {send_err}; terminal resume failed: {resume_err}"
+                                )),
+                            }
+                        } else {
+                            shell.send_line(&raw_cmd)
+                        }?;
+                        ui.learning.status =
+                            format!("Ran [{}]: {}", shell.mode().as_str(), raw_cmd);
+                        ui.learning.output_log.push(dispatch);
                     }
                     GuardDecision::Confirm(msg) => {
-                        ui.learning.status =
-                            format!("{} (prefix with '! ' to confirm)", msg);
+                        ui.learning.status = format!("{} (prefix with '! ' to confirm)", msg);
                     }
                     GuardDecision::Block(msg) => {
                         ui.learning.status = format!("Blocked: {}", msg);
@@ -262,8 +317,24 @@ fn run_loop(
                 engine.record_attempt();
                 match evaluate_command(&raw_cmd) {
                     GuardDecision::Allow | GuardDecision::Confirm(_) => {
-                        pty.send_line(&raw_cmd)?;
-                        ui.learning.status = format!("Forced run: {}", raw_cmd);
+                        let dispatch = if shell.mode() == ShellMode::External {
+                            suspend_terminal(terminal)?;
+                            let send_result = shell.send_line(&raw_cmd);
+                            let resume_result = resume_terminal(terminal);
+                            match (send_result, resume_result) {
+                                (Ok(dispatch), Ok(())) => Ok(dispatch),
+                                (Err(err), Ok(())) => Err(err),
+                                (Ok(_), Err(err)) => Err(err),
+                                (Err(send_err), Err(resume_err)) => Err(anyhow::anyhow!(
+                                    "shell dispatch failed: {send_err}; terminal resume failed: {resume_err}"
+                                )),
+                            }
+                        } else {
+                            shell.send_line(&raw_cmd)
+                        }?;
+                        ui.learning.status =
+                            format!("Forced run [{}]: {}", shell.mode().as_str(), raw_cmd);
+                        ui.learning.output_log.push(dispatch);
                     }
                     GuardDecision::Block(msg) => {
                         ui.learning.status = format!("Blocked: {}", msg);
@@ -279,6 +350,38 @@ fn run_loop(
     Ok(())
 }
 
+fn parse_shell_mode(args: &[String]) -> Result<ShellMode> {
+    let mut idx = 0;
+    while idx < args.len() {
+        if args[idx] == "--shell" {
+            if let Some(value) = args.get(idx + 1) {
+                if let Some(mode) = ShellMode::parse(value) {
+                    return Ok(mode);
+                }
+                anyhow::bail!(
+                    "invalid --shell value '{}'; expected embedded|external",
+                    value
+                );
+            }
+            anyhow::bail!("missing value for --shell (expected embedded|external)");
+        }
+        idx += 1;
+    }
+
+    Ok(ShellMode::Embedded)
+}
+
+fn parse_terminal_override(args: &[String]) -> Option<String> {
+    let mut idx = 0;
+    while idx < args.len() {
+        if args[idx] == "--terminal" {
+            return args.get(idx + 1).cloned();
+        }
+        idx += 1;
+    }
+    None
+}
+
 fn trim_output(output_log: &mut Vec<String>, max: usize) {
     if output_log.len() > max {
         let drop = output_log.len().saturating_sub(max);
@@ -291,13 +394,29 @@ fn setup_terminal() -> Result<Terminal<CrosstermBackend<Stdout>>> {
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
-    let terminal = Terminal::new(backend)?;
+    let mut terminal = Terminal::new(backend)?;
+    terminal.hide_cursor()?;
     Ok(terminal)
 }
 
-fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+fn suspend_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
+    Ok(())
+}
+
+fn resume_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+    enable_raw_mode()?;
+    execute!(terminal.backend_mut(), EnterAlternateScreen)?;
+    terminal.hide_cursor()?;
+    terminal.clear()?;
+    Ok(())
+}
+
+fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+    let _ = disable_raw_mode();
+    let _ = execute!(terminal.backend_mut(), LeaveAlternateScreen);
+    let _ = terminal.show_cursor();
     Ok(())
 }

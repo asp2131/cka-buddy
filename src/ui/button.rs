@@ -62,7 +62,9 @@ impl Widget for Button<'_> {
         let mut block = self.block.unwrap_or_else(Block::bordered);
 
         if self.selected {
-            block = block.border_set(border::THICK).border_style(UiStyle::HIGHLIGHT);
+            block = block
+                .border_set(border::THICK)
+                .border_style(UiStyle::HIGHLIGHT);
         } else {
             block = block.border_style(UiStyle::BORDER);
         }

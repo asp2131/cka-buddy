@@ -14,5 +14,29 @@
     "hook_event_name": "SessionEnd",
     "reason": "clear",
     "logged_at": "2026-02-25T17:52:49.068836"
+  },
+  {
+    "session_id": "ec846986-c581-4e68-93c8-9ab26ec047ad",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/ec846986-c581-4e68-93c8-9ab26ec047ad.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SessionEnd",
+    "reason": "prompt_input_exit",
+    "logged_at": "2026-02-25T18:04:42.250137"
+  },
+  {
+    "session_id": "f8d35a13-2f8d-429d-8cc8-7b84a3d7319d",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/f8d35a13-2f8d-429d-8cc8-7b84a3d7319d.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SessionEnd",
+    "reason": "other",
+    "logged_at": "2026-02-25T19:40:08.755212"
+  },
+  {
+    "session_id": "feb75eb9-9830-4743-967f-5b25b8ace787",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/feb75eb9-9830-4743-967f-5b25b8ace787.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SessionEnd",
+    "reason": "other",
+    "logged_at": "2026-02-25T19:43:47.780370"
   }
 ]

@@ -16,10 +16,7 @@ fn big_text(rows: &[&str]) -> Vec<Line<'static>> {
             let mut spans = Vec::new();
             for c in line.chars() {
                 if c == '█' {
-                    spans.push(Span::styled(
-                        "█",
-                        UiStyle::OK.add_modifier(Modifier::BOLD),
-                    ));
+                    spans.push(Span::styled("█", UiStyle::OK.add_modifier(Modifier::BOLD)));
                 } else {
                     spans.push(Span::styled(c.to_string(), UiStyle::HIGHLIGHT));
                 }
@@ -109,14 +106,7 @@ fn digit_lines(d: u8) -> Vec<Line<'static>> {
 }
 
 fn percent_lines() -> Vec<Line<'static>> {
-    big_text(&[
-        "██╗██╗",
-        "╚═╝██║",
-        "  ██╔╝",
-        " ██╔╝ ",
-        "██╔╝  ",
-        "╚═╝██╗",
-    ])
+    big_text(&["██╗██╗", "╚═╝██║", "  ██╔╝", " ██╔╝ ", "██╔╝  ", "╚═╝██╗"])
 }
 
 fn arrow_lines() -> Vec<Line<'static>> {
@@ -130,12 +120,7 @@ fn arrow_lines() -> Vec<Line<'static>> {
     ])
 }
 
-pub fn render_readiness_delta(
-    frame: &mut Frame,
-    area: Rect,
-    before: u8,
-    after: u8,
-) {
+pub fn render_readiness_delta(frame: &mut Frame, area: Rect, before: u8, after: u8) {
     let digit_width: u16 = 10;
     let arrow_width: u16 = 9;
     let percent_width: u16 = 8;

@@ -30,5 +30,45 @@
     "permission_mode": "plan",
     "hook_event_name": "UserPromptSubmit",
     "prompt": "/plan_w_team [design plan] [focus on making this as easy-to-use as claude code]"
+  },
+  {
+    "session_id": "f8d35a13-2f8d-429d-8cc8-7b84a3d7319d",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/f8d35a13-2f8d-429d-8cc8-7b84a3d7319d.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "Lets evaluate our learning ui/ux approach  and curriculum in @docs/cka-app-content/   approach so that I can go from zero (knowledge about how to do anything kubectl wise in the terminal) to cka exam levl-preppared. Give me your opinion. My current opinion is that this doesn't help setup basic kubernetes implementation to get started working with it on an example project, so that we can slowly  progress to things that I would have to go through on the cka"
+  },
+  {
+    "session_id": "f8d35a13-2f8d-429d-8cc8-7b84a3d7319d",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/f8d35a13-2f8d-429d-8cc8-7b84a3d7319d.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "put this summary in a md file in @specs/ and then get start with phase 1"
+  },
+  {
+    "session_id": "f8d35a13-2f8d-429d-8cc8-7b84a3d7319d",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/f8d35a13-2f8d-429d-8cc8-7b84a3d7319d.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "lets move onto the rest of the phases now"
+  },
+  {
+    "session_id": "f8d35a13-2f8d-429d-8cc8-7b84a3d7319d",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/f8d35a13-2f8d-429d-8cc8-7b84a3d7319d.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "cargo run\n\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s\n     Running `target/debug/cka_buddy_tui`\nError: failed parsing cka-step yaml block\n\nCaused by:\n    did not find expected '-' indicator at line 15 column 23, while parsing a block collection at line 14 column 3"
+  },
+  {
+    "session_id": "feb75eb9-9830-4743-967f-5b25b8ace787",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/feb75eb9-9830-4743-967f-5b25b8ace787.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "Launch a team of agents to fix this bug when after launching in shell mode, the tui app freezes when returning back to the tui app and its no way to close it unless we kill the entire terminal"
   }
 ]

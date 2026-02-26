@@ -14,8 +14,8 @@ use super::{
     traits::Screen,
     ui_action::UiAction,
     widgets::{
-        default_block, difficulty_badge, domain_tag, ellipsize, footer_help_text,
-        mode_badge, readiness_segments, step_type_badge, titled_block,
+        default_block, difficulty_badge, domain_tag, ellipsize, footer_help_text, mode_badge,
+        readiness_segments, step_type_badge, titled_block,
     },
 };
 
@@ -119,17 +119,20 @@ impl Screen for LearningScreen {
                     let cmd = parts.next().unwrap_or_default();
                     return Some(match cmd {
                         "/quit" => UiAction::Quit,
+                        "/new" => UiAction::NewSession,
                         "/next" => UiAction::NextStep,
                         "/prev" => UiAction::PrevStep,
                         "/back" => UiAction::JumpBack,
                         "/recommended" => UiAction::JumpRecommended,
                         "/verify" => UiAction::Verify,
                         "/hint" => UiAction::Hint,
-                        "/suggest" => {
-                            UiAction::Suggest(parts.next().and_then(|n| n.parse().ok()))
-                        }
+                        "/suggest" => UiAction::Suggest(parts.next().and_then(|n| n.parse().ok())),
                         "/clear" => UiAction::ClearLog,
                         "/help" => UiAction::ShowHelp,
+                        "/shell" => match parts.next() {
+                            Some(mode) => UiAction::SetShellMode(mode.to_string()),
+                            None => UiAction::ShowShellMode,
+                        },
                         _ => UiAction::None,
                     });
                 }
@@ -176,18 +179,12 @@ fn render_header(frame: &mut Frame, area: Rect, engine: &Engine) {
     let title = ellipsize(&step.title, inner.width.saturating_sub(4) as usize);
 
     let row1 = Line::from(vec![
-        Span::styled(
-            " CKA BUDDY ",
-            UiStyle::HEADER.add_modifier(Modifier::BOLD),
-        ),
+        Span::styled(" CKA BUDDY ", UiStyle::HEADER.add_modifier(Modifier::BOLD)),
         Span::styled(" [", UiStyle::MUTED),
         Span::styled(bar_on, UiStyle::OK),
         Span::styled(bar_off, UiStyle::MUTED),
         Span::styled("] ", UiStyle::MUTED),
-        Span::styled(
-            format!("{:>3}%  ", engine.readiness),
-            UiStyle::TEXT_PRIMARY,
-        ),
+        Span::styled(format!("{:>3}%  ", engine.readiness), UiStyle::TEXT_PRIMARY),
         Span::styled(step_chip, UiStyle::HIGHLIGHT),
         Span::raw(" "),
         step_type_badge(&step.step_type),
@@ -197,10 +194,7 @@ fn render_header(frame: &mut Frame, area: Rect, engine: &Engine) {
 
     let mut row2_spans = vec![
         Span::raw("  "),
-        Span::styled(
-            title,
-            UiStyle::TEXT_PRIMARY.add_modifier(Modifier::BOLD),
-        ),
+        Span::styled(title, UiStyle::TEXT_PRIMARY.add_modifier(Modifier::BOLD)),
         Span::raw("  "),
     ];
     for domain in &step.domains {
@@ -225,11 +219,8 @@ fn render_main_feed(
     let command_count = step.run_commands.len().min(5) as u16;
     let step_panel_height = (6 + command_count).clamp(6, area.height.saturating_sub(8).max(6));
 
-    let chunks = Layout::vertical([
-        Constraint::Length(step_panel_height),
-        Constraint::Min(4),
-    ])
-    .split(area);
+    let chunks =
+        Layout::vertical([Constraint::Length(step_panel_height), Constraint::Min(4)]).split(area);
 
     render_step_panel(frame, chunks[0], engine);
     render_terminal_feed(frame, chunks[1], output_log, hint_message, completion_card);
@@ -249,17 +240,15 @@ fn render_step_panel(frame: &mut Frame, area: Rect, engine: &Engine) {
                 UiStyle::TEXT_PRIMARY.add_modifier(Modifier::BOLD),
             ),
         ]),
-        Line::from(vec![
-            Span::styled(
-                format!(
-                    "  {} min  |  {}  |  {}",
-                    step.timebox_min,
-                    step.difficulty,
-                    step.domains.join(", ")
-                ),
-                UiStyle::MUTED,
+        Line::from(vec![Span::styled(
+            format!(
+                "  {} min  |  {}  |  {}",
+                step.timebox_min,
+                step.difficulty,
+                step.domains.join(", ")
             ),
-        ]),
+            UiStyle::MUTED,
+        )]),
         Line::from(""),
     ];
 
@@ -278,10 +267,7 @@ fn render_step_panel(frame: &mut Frame, area: Rect, engine: &Engine) {
         }
     }
 
-    frame.render_widget(
-        Paragraph::new(lines).wrap(Wrap { trim: true }),
-        inner,
-    );
+    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
 }
 
 fn render_terminal_feed(
@@ -308,10 +294,7 @@ fn render_terminal_feed(
     if let Some(hint) = hint_message {
         lines.push(Line::from(""));
         lines.push(Line::from(vec![
-            Span::styled(
-                "  ● Hint: ",
-                UiStyle::WARNING.add_modifier(Modifier::BOLD),
-            ),
+            Span::styled("  ● Hint: ", UiStyle::WARNING.add_modifier(Modifier::BOLD)),
             Span::styled(
                 hint.to_string(),
                 UiStyle::WARNING.add_modifier(Modifier::ITALIC),
@@ -322,14 +305,8 @@ fn render_terminal_feed(
     if let Some(card) = completion_card {
         lines.push(Line::from(""));
         lines.push(Line::from(vec![
-            Span::styled(
-                "  ✓ ",
-                UiStyle::OK.add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
-                card.done.clone(),
-                UiStyle::OK.add_modifier(Modifier::BOLD),
-            ),
+            Span::styled("  ✓ ", UiStyle::OK.add_modifier(Modifier::BOLD)),
+            Span::styled(card.done.clone(), UiStyle::OK.add_modifier(Modifier::BOLD)),
         ]));
         for item in &card.what_changed {
             lines.push(Line::from(vec![
@@ -354,6 +331,32 @@ fn render_terminal_feed(
     );
 }
 
+fn status_badge(status: &str) -> (&'static str, ratatui::style::Style) {
+    let normalized = status.trim();
+    let lower = normalized.to_ascii_lowercase();
+
+    let (label, style) = if lower.starts_with("error")
+        || lower.starts_with("fail")
+        || lower.contains("failed")
+        || lower.contains("error")
+    {
+        ("ERROR", UiStyle::ERROR)
+    } else if lower.starts_with("warn") || lower.contains("warning") {
+        ("WARN", UiStyle::WARNING)
+    } else if lower.starts_with("ok")
+        || lower.starts_with("done")
+        || lower.starts_with("success")
+        || lower.contains("complete")
+        || lower.contains("ready")
+    {
+        ("SUCCESS", UiStyle::OK)
+    } else {
+        ("INFO", UiStyle::HIGHLIGHT)
+    };
+
+    (label, style.add_modifier(Modifier::BOLD))
+}
+
 fn render_activity_rail(
     frame: &mut Frame,
     area: Rect,
@@ -366,12 +369,13 @@ fn render_activity_rail(
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    let mut lines = vec![
-        Line::from(vec![
-            Span::styled("  Status: ", UiStyle::MUTED),
-            Span::styled(status.to_string(), UiStyle::TEXT_PRIMARY),
-        ]),
-    ];
+    let (status_label, status_style) = status_badge(status);
+    let mut lines = vec![Line::from(vec![
+        Span::styled("  Status ", UiStyle::MUTED),
+        Span::styled(format!("[{status_label}]"), status_style),
+        Span::raw(" "),
+        Span::styled(status.to_string(), UiStyle::TEXT_PRIMARY),
+    ])];
 
     if let Some(hint) = hint_message {
         lines.push(Line::from(""));
@@ -411,13 +415,55 @@ fn render_activity_rail(
         }
     }
 
-    frame.render_widget(
-        Paragraph::new(lines).wrap(Wrap { trim: true }),
-        inner,
-    );
+    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
 }
 
 fn render_command_bar(frame: &mut Frame, area: Rect, command_input: &str, status: &str) {
+    if area.height == 0 {
+        return;
+    }
+
+    let help_text = footer_help_text(command_input);
+    let (badge_label, badge_style) = mode_badge(status, command_input);
+
+    if area.height == 1 {
+        let compact = Line::from(vec![
+            Span::styled(" ❯ ", UiStyle::PROMPT.add_modifier(Modifier::BOLD)),
+            Span::styled(command_input.to_string(), UiStyle::TEXT_PRIMARY),
+            Span::raw(" "),
+            Span::styled(format!("[{badge_label}]"), badge_style),
+        ]);
+        frame.render_widget(Paragraph::new(compact), area);
+        return;
+    }
+
+    if area.height == 2 {
+        let rows = Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).split(area);
+        frame.render_widget(
+            Paragraph::new(Line::from(Span::styled(
+                format!("  {help_text}"),
+                UiStyle::MUTED,
+            ))),
+            rows[0],
+        );
+
+        let compact = Line::from(vec![
+            Span::styled("  ❯ ", UiStyle::PROMPT.add_modifier(Modifier::BOLD)),
+            Span::styled(command_input.to_string(), UiStyle::TEXT_PRIMARY),
+            Span::raw("  "),
+            Span::styled(format!("[{badge_label}]"), badge_style),
+        ]);
+        frame.render_widget(
+            Paragraph::new(compact).block(
+                Block::default()
+                    .borders(Borders::TOP)
+                    .border_style(UiStyle::BORDER),
+            ),
+            rows[1],
+        );
+        return;
+    }
+
     let bar = Layout::vertical([
         Constraint::Length(1),
         Constraint::Length(1),
@@ -425,8 +471,6 @@ fn render_command_bar(frame: &mut Frame, area: Rect, command_input: &str, status
     ])
     .split(area);
 
-    // Footer help line
-    let help_text = footer_help_text(command_input);
     frame.render_widget(
         Paragraph::new(Line::from(Span::styled(
             format!("  {help_text}"),
@@ -435,7 +479,6 @@ fn render_command_bar(frame: &mut Frame, area: Rect, command_input: &str, status
         bar[0],
     );
 
-    // Status line with separator
     frame.render_widget(
         Paragraph::new(Line::from(Span::styled(
             format!("  {status}"),
@@ -449,13 +492,8 @@ fn render_command_bar(frame: &mut Frame, area: Rect, command_input: &str, status
         bar[1],
     );
 
-    // Input prompt
-    let (badge_label, badge_style) = mode_badge(status, command_input);
     let input_line = Line::from(vec![
-        Span::styled(
-            "  ❯ ",
-            UiStyle::PROMPT.add_modifier(Modifier::BOLD),
-        ),
+        Span::styled("  ❯ ", UiStyle::PROMPT.add_modifier(Modifier::BOLD)),
         Span::styled(command_input.to_string(), UiStyle::TEXT_PRIMARY),
         Span::raw("  "),
         Span::styled(format!("[{badge_label}]"), badge_style),

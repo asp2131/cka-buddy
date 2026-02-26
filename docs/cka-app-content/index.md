@@ -19,6 +19,8 @@ timebox_min: 4800
 
 ## Project Sequence
 
+0a. `projects/00-environment-and-first-contact.md`
+0b. `projects/00b-kubectl-fluency-and-yaml.md`
 1. `projects/01-cluster-foundations-and-speed.md`
 2. `projects/02-workloads-scheduling-storage.md`
 3. `projects/03-services-networkpolicy-dns.md`

@@ -1,15 +1,16 @@
 use anyhow::Result;
-use crossterm::event::{KeyCode, KeyEvent};
-use ratatui::Frame;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use ratatui::{
+    Frame,
+    style::{Color, Style},
+    widgets::Clear,
+};
 
 use crate::app::engine::Engine;
 
 use super::{
-    learning_screen::LearningScreen,
-    popup::PopupMessage,
-    splash_screen::SplashScreen,
-    traits::Screen,
-    ui_action::UiAction,
+    constants::centered_clamped_viewport, learning_screen::LearningScreen, popup::PopupMessage,
+    splash_screen::SplashScreen, traits::Screen, ui_action::UiAction,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,13 +61,23 @@ impl UiScreen {
     }
 
     pub fn render(&mut self, frame: &mut Frame, engine: &Engine) -> Result<()> {
-        let area = frame.area();
+        let area = centered_clamped_viewport(frame.area());
         match self.state {
             ScreenState::Splash => self.splash.render(frame, engine, area)?,
             ScreenState::Learning => self.learning.render(frame, engine, area)?,
         }
 
         if let Some(popup) = self.popup_stack.last() {
+            frame.render_widget(Clear, area);
+            frame.render_widget(
+                ratatui::widgets::Block::default()
+                    .style(Style::default().bg(Color::Rgb(14, 18, 28))),
+                area,
+            );
+            match self.state {
+                ScreenState::Splash => self.splash.render(frame, engine, area)?,
+                ScreenState::Learning => self.learning.render(frame, engine, area)?,
+            }
             popup.render(frame, area);
         }
 
@@ -74,6 +85,10 @@ impl UiScreen {
     }
 
     pub fn handle_key_events(&mut self, key: KeyEvent, engine: &Engine) -> Option<UiAction> {
+        if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+            return Some(UiAction::Quit);
+        }
+
         // Popup takes priority
         if let Some(popup) = self.popup_stack.last_mut() {
             return handle_popup_key(key, popup);

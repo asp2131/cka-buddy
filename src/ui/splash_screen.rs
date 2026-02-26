@@ -10,12 +10,7 @@ use ratatui::{
 
 use crate::app::engine::Engine;
 
-use super::{
-    button::Button,
-    constants::UiStyle,
-    traits::Screen,
-    ui_action::UiAction,
-};
+use super::{button::Button, constants::UiStyle, traits::Screen, ui_action::UiAction};
 
 const TITLE: [&str; 6] = [
     " ██████╗██╗  ██╗ █████╗     ██████╗ ██╗   ██╗██████╗ ██████╗ ██╗   ██╗",
@@ -150,7 +145,10 @@ impl Screen for SplashScreen {
             frame.render_widget(
                 Paragraph::new(Line::from(vec![
                     Span::styled(format!("{percent}% ready"), UiStyle::OK),
-                    Span::styled(format!(" | {done}/{total} steps complete"), UiStyle::TEXT_SECONDARY),
+                    Span::styled(
+                        format!(" | {done}/{total} steps complete"),
+                        UiStyle::TEXT_SECONDARY,
+                    ),
                 ]))
                 .centered(),
                 chunks[4],
@@ -195,6 +193,6 @@ impl Screen for SplashScreen {
     }
 
     fn footer_help(&self) -> String {
-        "↑/↓ Select • Enter Confirm".to_string()
+        "↑/↓ Select • Enter Confirm • Ctrl+C Quit".to_string()
     }
 }

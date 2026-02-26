@@ -1,0 +1,6 @@
+{
+  "session_id": "feb75eb9-9830-4743-967f-5b25b8ace787",
+  "prompts": [
+    "Launch a team of agents to fix this bug when after launching in shell mode, the tui app freezes when returning back to the tui app and its no way to close it unless we kill the entire terminal"
+  ]
+}

@@ -82,5 +82,41 @@
     "agent_transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/ec846986-c581-4e68-93c8-9ab26ec047ad/subagents/agent-a20b943384fa59ef2.jsonl",
     "agent_type": "",
     "last_assistant_message": "cargo clippy 2>&1"
+  },
+  {
+    "session_id": "f8d35a13-2f8d-429d-8cc8-7b84a3d7319d",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/f8d35a13-2f8d-429d-8cc8-7b84a3d7319d.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "ae3c7739e1526489c",
+    "agent_transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/f8d35a13-2f8d-429d-8cc8-7b84a3d7319d/subagents/agent-ae3c7739e1526489c.jsonl",
+    "agent_type": "",
+    "last_assistant_message": "yes, draft Phase 0 and Phase 1"
+  },
+  {
+    "session_id": "f8d35a13-2f8d-429d-8cc8-7b84a3d7319d",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/f8d35a13-2f8d-429d-8cc8-7b84a3d7319d.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "aef609029c5da5989",
+    "agent_transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/f8d35a13-2f8d-429d-8cc8-7b84a3d7319d/subagents/agent-aef609029c5da5989.jsonl",
+    "agent_type": "",
+    "last_assistant_message": "now lets start working through phase 0"
+  },
+  {
+    "session_id": "f8d35a13-2f8d-429d-8cc8-7b84a3d7319d",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/f8d35a13-2f8d-429d-8cc8-7b84a3d7319d.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a6d41730d359a25ee",
+    "agent_transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/f8d35a13-2f8d-429d-8cc8-7b84a3d7319d/subagents/agent-a6d41730d359a25ee.jsonl",
+    "agent_type": "Explore",
+    "last_assistant_message": "Perfect! I have found all the information you need. Here's a comprehensive summary of the cka-step block parser:\n\n## Parser Location and Implementation\n\n**File:** `/Users/akinpound/Documents/cka-buddy/src/content/loader.rs`\n\n**Key Functions:**\n- `parse_strict_blocks()` - lines 189-204 (main parser function)\n- `parse_steps_from_doc()` - lines 85-187 (calls the parser)\n\n**StrictBlock struct definition** - lines 31-52\n\n## Markdown Format Requirements\n\nThe parser uses a regex pattern to extract cka-step blocks:\n```rust\nlet re = Regex::new(r\"(?s)```cka-step\\n(.*?)\\n```\")?;\n```\n\n**Strict formatting required:**\n- Block must start with: ` ```cka-step` (with backtick)\n- Must be followed by a newline\n- Content is YAML\n- Block must end with a newline followed by ` ``` ` (with backtick)\n\nExample format:\n```\n```cka-step\nstep_id: some-id\ntitle: Some Title\nobjective: The objective\ncommands:\n  - command 1\n  - command 2\nsuccess_check:\n  - check 1\nsuccess_contains:\n  - text 1\nwhat_changed:\n  - change 1\n```\n```\n\n## YAML Field Structure\n\nFrom the `StrictBlock` struct (lines 31-52 in loader.rs):\n\n| Field | Type | Required | Default | Notes |\n|-------|------|----------|---------|-------|\n| `step_id` | String | \u2713 Required | - | Must not be empty/whitespace |\n| `title` | String | \u2713 Required | - | Display name for the step |\n| `objective` | String | \u2713 Required | - | What the user should accomplish |\n| `commands` | Vec<String> | Optional | Empty vec | List of commands to run |\n| `success_check` | Vec<String> | Optional | Empty vec | Verification commands (also used as fallback for `verify`) |\n| `success_contains` | Vec<String> | Optional | Empty vec | Text strings to find in command output |\n| `verify` | Vec<String> | Optional | Empty vec | Verification commands (preferred over `success_check` if provided) |\n| `what_changed` | Vec<String> | Optional | Empty vec | Description of system changes made |\n| `fallback_hint` | Option<String> | Optional | None | Hint to show if verification fails |\n| `ready_weight` | Option<u32> | Optional | Type-based | Weight for readiness calculation |\n| `optional` | bool | Optional | false | Whether step can be skipped |\n\nAll fields use `#[serde(default)]` which means missing fields will use Rust defaults (empty vecs, None for Options, false for bools).\n\n## Processing & Mapping\n\nWhen a cka-step block is parsed (lines 126-151), it gets converted to a `Step` struct with this mapping:\n\n- `step_id` \u2192 `Step.id`\n- `title` \u2192 `Step.title`\n- `objective` \u2192 `Step.objective`\n- `commands` \u2192 `Step.run_items` AND `Step.run_commands`\n- `success_check` \u2192 `Step.success_check_commands` (also fallback if `verify` is empty)\n- `verify` \u2192 `Step.verify_commands` (preferred; uses `success_check` if empty)\n- `success_contains` \u2192 `Step.success_contains`\n- `what_changed` \u2192 `Step.what_changed`\n- `fallback_hint` \u2192 `Step.fallback_hint`\n- `optional` \u2192 `Step.optional`\n\n## Validation Rules\n\nFrom `parse_strict_blocks()` (line 199):\n```rust\nif !parsed.step_id.trim().is_empty() {\n    out.push(parsed);\n}\n```\n\n**Only validation:** The `step_id` field must not be empty or whitespace-only. If it is, the block is silently skipped.\n\nAll YAML parsing is delegated to `serde_yaml::from_str()`, which will error if the YAML is malformed."
   }
 ]

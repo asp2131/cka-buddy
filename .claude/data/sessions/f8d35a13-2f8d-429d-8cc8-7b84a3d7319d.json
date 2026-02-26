@@ -1,0 +1,9 @@
+{
+  "session_id": "f8d35a13-2f8d-429d-8cc8-7b84a3d7319d",
+  "prompts": [
+    "Lets evaluate our learning ui/ux approach  and curriculum in @docs/cka-app-content/   approach so that I can go from zero (knowledge about how to do anything kubectl wise in the terminal) to cka exam levl-preppared. Give me your opinion. My current opinion is that this doesn't help setup basic kubernetes implementation to get started working with it on an example project, so that we can slowly  progress to things that I would have to go through on the cka",
+    "put this summary in a md file in @specs/ and then get start with phase 1",
+    "lets move onto the rest of the phases now",
+    "cargo run\n\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s\n     Running `target/debug/cka_buddy_tui`\nError: failed parsing cka-step yaml block\n\nCaused by:\n    did not find expected '-' indicator at line 15 column 23, while parsing a block collection at line 14 column 3"
+  ]
+}

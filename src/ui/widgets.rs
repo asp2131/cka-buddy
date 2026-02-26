@@ -15,10 +15,7 @@ pub fn default_block() -> Block<'static> {
 pub fn titled_block(title: &str) -> Block<'static> {
     Block::bordered()
         .border_style(UiStyle::BORDER)
-        .title(Span::styled(
-            format!(" {title} "),
-            UiStyle::TEXT_SECONDARY,
-        ))
+        .title(Span::styled(format!(" {title} "), UiStyle::TEXT_SECONDARY))
 }
 
 pub fn progress_bar(percentage: u8, width: usize) -> Line<'static> {
@@ -45,18 +42,11 @@ pub fn progress_bar(percentage: u8, width: usize) -> Line<'static> {
 
 pub fn step_type_badge(step_type: &StepType) -> Span<'static> {
     match step_type {
-        StepType::Exam => Span::styled(
-            "[EXAM]",
-            UiStyle::WARNING.add_modifier(Modifier::BOLD),
-        ),
-        StepType::Project => Span::styled(
-            "[PROJECT]",
-            UiStyle::HEADER.add_modifier(Modifier::BOLD),
-        ),
-        StepType::Bug => Span::styled(
-            "[BUG]",
-            UiStyle::ERROR.add_modifier(Modifier::BOLD),
-        ),
+        StepType::Exam => Span::styled("[EXAM]", UiStyle::WARNING.add_modifier(Modifier::BOLD)),
+        StepType::Project => {
+            Span::styled("[PROJECT]", UiStyle::HEADER.add_modifier(Modifier::BOLD))
+        }
+        StepType::Bug => Span::styled("[BUG]", UiStyle::ERROR.add_modifier(Modifier::BOLD)),
     }
 }
 
@@ -149,6 +139,8 @@ pub fn footer_help_text(command_input: &str) -> String {
         "/verify — Run verification checks for current step".to_string()
     } else if command_input.starts_with("/suggest") {
         "/suggest [n] — Load suggested command".to_string()
+    } else if command_input.starts_with("/new") {
+        "/new — Reset progress and restart from Project 00".to_string()
     } else if command_input.starts_with('/') {
         "Type a slash command. /help for full list.".to_string()
     } else if command_input.is_empty() {
