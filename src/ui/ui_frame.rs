@@ -1,7 +1,6 @@
 use ratatui::{
     Frame,
     layout::Rect,
-    text::Text,
     widgets::{StatefulWidget, Widget},
 };
 
@@ -11,7 +10,7 @@ pub struct UiFrame<'a, 'b> {
     frame: &'a mut Frame<'b>,
     callback_registry: CallbackRegistry,
     hover_text_area: Rect,
-    hover_text: Option<Text<'static>>,
+    hover_text: Option<String>,
 }
 
 impl<'a, 'b> UiFrame<'a, 'b> {
@@ -43,7 +42,7 @@ impl<'a, 'b> UiFrame<'a, 'b> {
         let layer = widget.layer();
         let is_hovered = self.is_hovered(area, layer);
         if is_hovered && self.hover_text.is_none() {
-            self.hover_text = Some(widget.hover_text().to_owned());
+            self.hover_text = Some(widget.hover_text().to_string());
         }
 
         widget.before_rendering(area, &mut self.callback_registry);
@@ -61,7 +60,7 @@ impl<'a, 'b> UiFrame<'a, 'b> {
         let layer = widget.layer();
         let is_hovered = self.is_hovered(area, layer);
         if is_hovered && self.hover_text.is_none() {
-            self.hover_text = Some(widget.hover_text().to_owned());
+            self.hover_text = Some(widget.hover_text().to_string());
         }
 
         widget.before_rendering(area, &mut self.callback_registry);
@@ -88,8 +87,8 @@ impl<'a, 'b> UiFrame<'a, 'b> {
         &mut self.callback_registry
     }
 
-    pub fn hover_text(&self) -> Option<&Text<'static>> {
-        self.hover_text.as_ref()
+    pub fn hover_text(&self) -> Option<&str> {
+        self.hover_text.as_deref()
     }
 
     pub fn into_registry(self) -> CallbackRegistry {

@@ -117,6 +117,27 @@ impl UiScreen {
         Ok(())
     }
 
+    fn active_footer_spans(&self) -> Vec<(String, String)> {
+        if let Some(popup) = self.popup_stack.last() {
+            return match popup {
+                PopupMessage::Tutorial { .. } => vec![
+                    ("←/→".to_string(), "Navigate".to_string()),
+                    ("Enter".to_string(), "Start/Close".to_string()),
+                    ("Esc".to_string(), "Close".to_string()),
+                ],
+                _ => vec![
+                    ("Enter".to_string(), "Close".to_string()),
+                    ("Esc".to_string(), "Close".to_string()),
+                ],
+            };
+        }
+
+        match self.state {
+            ScreenState::Splash => self.splash.footer_spans(),
+            ScreenState::Learning => self.learning.footer_spans(),
+        }
+    }
+
     pub fn callback_registry(&self) -> &CallbackRegistry {
         &self.callback_registry
     }
@@ -179,8 +200,8 @@ fn render_hover_help(frame: &mut UiFrame<'_, '_>, area: Rect) {
 
     let text = frame
         .hover_text()
-        .cloned()
-        .unwrap_or_else(|| "Type commands or click actions".into());
+        .unwrap_or("Type commands or click actions")
+        .to_string();
     frame.render_widget(Paragraph::new(text).style(UiStyle::HOVER_HELP), area);
 }
 

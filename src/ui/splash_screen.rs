@@ -196,4 +196,12 @@ impl Screen for SplashScreen {
     fn footer_help(&self) -> String {
         "↑/↓ Select • Enter Confirm • Ctrl+C Quit".to_string()
     }
+
+    fn footer_spans(&self) -> Vec<(String, String)> {
+        vec![
+            ("↑/↓".to_string(), "Select".to_string()),
+            ("Enter".to_string(), "Confirm".to_string()),
+            ("Ctrl+C".to_string(), "Quit".to_string()),
+        ]
+    }
 }

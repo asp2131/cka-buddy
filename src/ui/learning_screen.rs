@@ -13,6 +13,7 @@ use crate::content::command_info::command_blurb;
 use super::{
     button::Button,
     clickable_list::ClickableList,
+    cluster_view::ClusterView,
     constants::UiStyle,
     traits::Screen,
     ui_frame::UiFrame,
@@ -409,58 +410,26 @@ fn render_activity_rail(
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
+    let sections = Layout::vertical([Constraint::Min(6), Constraint::Length(6)]).split(inner);
+
+    let cluster = ClusterView::new("CLUSTER", "k8s", run_commands, run_commands.len());
+    frame.render_widget(cluster, sections[0]);
+
     let (status_label, status_style) = status_badge(status);
     let mut lines = vec![Line::from(vec![
         Span::styled("  Status ", UiStyle::MUTED),
         Span::styled(format!("[{status_label}]"), status_style),
-        Span::raw(" "),
-        Span::styled(status.to_string(), UiStyle::TEXT_PRIMARY),
     ])];
 
     if let Some(hint) = hint_message {
-        lines.push(Line::from(""));
-        lines.push(Line::from(Span::styled(
-            "  Hint",
-            UiStyle::WARNING.add_modifier(Modifier::BOLD),
-        )));
-        lines.push(Line::from(Span::styled(
-            format!("  {hint}"),
-            UiStyle::WARNING,
-        )));
+        lines.push(Line::from(Span::styled(format!("  {hint}"), UiStyle::WARNING)));
     }
 
     if let Some(card) = completion_card {
-        lines.push(Line::from(""));
-        lines.push(Line::from(Span::styled(
-            "  Verify Result",
-            UiStyle::OK.add_modifier(Modifier::BOLD),
-        )));
-        lines.push(Line::from(Span::styled(
-            format!("  {}", card.done),
-            UiStyle::OK,
-        )));
+        lines.push(Line::from(Span::styled(format!("  {}", card.done), UiStyle::OK)));
     }
 
-    if !run_commands.is_empty() {
-        lines.push(Line::from(""));
-        lines.push(Line::from(Span::styled(
-            "  What You'll Do",
-            UiStyle::HIGHLIGHT.add_modifier(Modifier::BOLD),
-        )));
-        for cmd in run_commands.iter().take(3) {
-            let blurb = command_blurb(cmd);
-            lines.push(Line::from(vec![
-                Span::styled("  ▸ ", UiStyle::MUTED),
-                Span::styled(blurb, UiStyle::TEXT_PRIMARY),
-            ]));
-            lines.push(Line::from(vec![
-                Span::raw("    "),
-                Span::styled(cmd.clone(), UiStyle::COMMAND),
-            ]));
-        }
-    }
-
-    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
+    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), sections[1]);
 }
 
 fn render_action_row(frame: &mut UiFrame<'_, '_>, area: Rect, enable_hotkeys: bool) {
