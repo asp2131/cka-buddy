@@ -49,4 +49,14 @@ impl UiStyle {
     pub const DIFF_EASY: Style = Self::DEFAULT.fg(Color::Rgb(80, 220, 120));
     pub const DIFF_MEDIUM: Style = Self::DEFAULT.fg(Color::Rgb(255, 185, 50));
     pub const DIFF_HARD: Style = Self::DEFAULT.fg(Color::Rgb(240, 70, 70));
+
+    pub const HOVER: Style = Self::DEFAULT.bg(Color::Rgb(45, 50, 70));
+    pub const FOOTER_KEY: Style = Self::DEFAULT
+        .fg(Color::Rgb(14, 18, 28))
+        .bg(Color::Rgb(140, 150, 170));
+    pub const FOOTER_DESC: Style = Self::DEFAULT
+        .fg(Color::Rgb(200, 205, 215))
+        .bg(Color::Rgb(35, 40, 55));
+    pub const BUTTON_ACTIVE: Style = Self::DEFAULT.fg(Color::Rgb(118, 213, 192));
+    pub const HOTKEY_UNDERLINE: Style = Self::DEFAULT.fg(Color::Rgb(255, 220, 100));
 }
