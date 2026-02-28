@@ -2,15 +2,23 @@ use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     Frame,
+    layout::{Constraint, Layout, Rect},
     style::{Color, Style},
-    widgets::Clear,
+    text::{Line, Span},
+    widgets::{Clear, Paragraph},
 };
 
 use crate::app::engine::Engine;
 
 use super::{
-    constants::centered_clamped_viewport, learning_screen::LearningScreen, popup::PopupMessage,
-    splash_screen::SplashScreen, traits::Screen, ui_action::UiAction, ui_frame::UiFrame,
+    callback_registry::CallbackRegistry,
+    constants::{UiStyle, centered_clamped_viewport},
+    learning_screen::LearningScreen,
+    popup::PopupMessage,
+    splash_screen::SplashScreen,
+    traits::Screen,
+    ui_action::UiAction,
+    ui_frame::UiFrame,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,13 +68,38 @@ impl UiScreen {
         Ok(())
     }
 
-    pub fn render(&mut self, frame: &mut Frame, engine: &Engine) -> Result<()> {
+    pub fn render(
+        &mut self,
+        frame: &mut Frame,
+        engine: &Engine,
+        mouse_pos: Option<(u16, u16)>,
+    ) -> CallbackRegistry {
         let area = centered_clamped_viewport(frame.area());
-        let mut ui_frame = UiFrame::new(frame, area, None);
-        match self.state {
-            ScreenState::Splash => self.splash.render(&mut ui_frame, engine, area)?,
-            ScreenState::Learning => self.learning.render(&mut ui_frame, engine, area)?,
+
+        let (body, footer, hover) = split_shell(area);
+
+        let mut ui_frame = UiFrame::new(frame, hover, mouse_pos);
+
+        if self.has_popup() {
+            ui_frame.set_active_layer(1);
         }
+
+        match self.state {
+            ScreenState::Splash => {
+                let _ = self.splash.render(&mut ui_frame, engine, body);
+            }
+            ScreenState::Learning => {
+                let _ = self.learning.render(&mut ui_frame, engine, body);
+            }
+        }
+
+        let footer_spans = match self.state {
+            ScreenState::Splash => self.splash.footer_spans(),
+            ScreenState::Learning => self.learning.footer_spans(),
+        };
+        render_footer(&mut ui_frame, footer, &footer_spans);
+
+        ui_frame.render_hover_text();
 
         if let Some(popup) = self.popup_stack.last() {
             let f = ui_frame.inner_frame();
@@ -76,14 +109,19 @@ impl UiScreen {
                     .style(Style::default().bg(Color::Rgb(14, 18, 28))),
                 area,
             );
+            let body2 = Rect::new(body.x, body.y, body.width, body.height);
             match self.state {
-                ScreenState::Splash => self.splash.render(&mut ui_frame, engine, area)?,
-                ScreenState::Learning => self.learning.render(&mut ui_frame, engine, area)?,
+                ScreenState::Splash => {
+                    let _ = self.splash.render(&mut ui_frame, engine, body2);
+                }
+                ScreenState::Learning => {
+                    let _ = self.learning.render(&mut ui_frame, engine, body2);
+                }
             }
             popup.render(ui_frame.inner_frame(), area);
         }
 
-        Ok(())
+        ui_frame.into_registry()
     }
 
     pub fn handle_key_events(&mut self, key: KeyEvent, engine: &Engine) -> Option<UiAction> {
@@ -91,7 +129,6 @@ impl UiScreen {
             return Some(UiAction::Quit);
         }
 
-        // Popup takes priority
         if let Some(popup) = self.popup_stack.last_mut() {
             return handle_popup_key(key, popup);
         }
@@ -101,6 +138,28 @@ impl UiScreen {
             ScreenState::Learning => self.learning.handle_key_events(key, engine),
         }
     }
+}
+
+fn split_shell(area: Rect) -> (Rect, Rect, Rect) {
+    let chunks = Layout::vertical([
+        Constraint::Min(0),
+        Constraint::Length(1),
+        Constraint::Length(1),
+    ])
+    .split(area);
+    (chunks[0], chunks[1], chunks[2])
+}
+
+fn render_footer(frame: &mut UiFrame, area: Rect, spans: &[(&str, &str)]) {
+    if area.width == 0 || spans.is_empty() {
+        return;
+    }
+    let mut parts: Vec<Span> = Vec::new();
+    for (key, desc) in spans {
+        parts.push(Span::styled(format!(" {} ", key), UiStyle::FOOTER_KEY));
+        parts.push(Span::styled(format!(" {} ", desc), UiStyle::FOOTER_DESC));
+    }
+    frame.render_widget(Paragraph::new(Line::from(parts)), area);
 }
 
 fn handle_popup_key(key: KeyEvent, popup: &mut PopupMessage) -> Option<UiAction> {
