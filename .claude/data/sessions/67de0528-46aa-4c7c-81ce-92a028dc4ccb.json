@@ -1,0 +1,6 @@
+{
+  "session_id": "67de0528-46aa-4c7c-81ce-92a028dc4ccb",
+  "prompts": [
+    "in our tui's info section, instead of redisplaying the command we run, can we provide a blurb about what the different commands are doing and even make novel comparisons like how someone woud compare \"the human skeleton to the human body as html is to website\" <- thats easy to understand even for non-developers. use a team of agents"
+  ]
+}

@@ -116,18 +116,20 @@ title: edit and apply the manifest
 objective: Add a container port to the generated YAML and apply it.
 ready_weight: 3
 commands:
-  - "echo '    Add under containers[0].spec:' && echo '      ports:' && echo '      - containerPort: 80'"
+  - "echo 'Paste this exactly under spec.template.spec.containers[0] (same indent as image:):'"
+  - "echo '        ports:'"
+  - "echo '        - containerPort: 80'"
   - vi /tmp/web-deploy.yaml
   - kubectl apply -f /tmp/web-deploy.yaml
   - kubectl -n fluency-lab get deploy web
 success_check:
-  - kubectl -n fluency-lab get deploy web -o jsonpath='{.spec.replicas}'
+  - kubectl -n fluency-lab get deploy web -o jsonpath='{.spec.template.spec.containers[0].ports[0].containerPort}'
 success_contains:
-  - "2"
+  - "80"
 what_changed:
   - Deployment web created from your edited YAML
   - 2 nginx pods running with containerPort 80 declared
-fallback_hint: In vi press i to enter insert mode, add the ports block under containers, press Esc then :wq to save.
+fallback_hint: Indentation matters in YAML. Keep ports aligned with image under the same container item.
 ```
 
 ```cka-step
@@ -209,18 +211,21 @@ fallback_hint: Check pod status with kubectl -n two-tier get pods if replicas ar
 ```cka-step
 step_id: p00b-s10
 title: verify connectivity
-objective: Prove that frontend pods can reach the backend service by DNS name.
+objective: Prove service-to-service DNS and HTTP reachability using a temporary curl pod.
 ready_weight: 3
 commands:
-  - kubectl -n two-tier exec deploy/frontend -- curl -s http://backend.two-tier.svc.cluster.local/get
+  - kubectl -n two-tier run curl-test --image=curlimages/curl:8.7.1 --restart=Never --command -- sleep 120
+  - kubectl -n two-tier wait --for=condition=Ready pod/curl-test --timeout=60s
+  - kubectl -n two-tier exec curl-test -- curl -s http://backend.two-tier.svc.cluster.local/get
 success_check:
-  - kubectl -n two-tier exec deploy/frontend -- curl -s -o /dev/null -w '%{http_code}' http://backend.two-tier.svc.cluster.local/get
+  - kubectl -n two-tier exec curl-test -- curl -s -o /dev/null -w '%{http_code}' http://backend.two-tier.svc.cluster.local/get
 success_contains:
   - "200"
 what_changed:
-  - Nothing changed — this is a connectivity test
-  - Frontend pod resolved backend via cluster DNS and got HTTP 200
-fallback_hint: The DNS pattern is <service>.<namespace>.svc.cluster.local — check service name and namespace.
+  - Temporary pod curl-test created to run curl reliably
+  - Connectivity to backend service verified with HTTP 200
+  - Temporary pod can be removed after test
+fallback_hint: Clean up with "kubectl -n two-tier delete pod curl-test --ignore-not-found" after verification.
 ```
 
 ```cka-step

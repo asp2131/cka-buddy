@@ -70,5 +70,53 @@
     "permission_mode": "default",
     "hook_event_name": "UserPromptSubmit",
     "prompt": "Launch a team of agents to fix this bug when after launching in shell mode, the tui app freezes when returning back to the tui app and its no way to close it unless we kill the entire terminal"
+  },
+  {
+    "session_id": "67de0528-46aa-4c7c-81ce-92a028dc4ccb",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/67de0528-46aa-4c7c-81ce-92a028dc4ccb.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "in our tui's info section, instead of redisplaying the command we run, can we provide a blurb about what the different commands are doing and even make novel comparisons like how someone woud compare \"the human skeleton to the human body as html is to website\" <- thats easy to understand even for non-developers. use a team of agents"
+  },
+  {
+    "session_id": "e985df0e-0af9-430d-acc7-b72656909a00",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/e985df0e-0af9-430d-acc7-b72656909a00.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "Use an agent team to evaluate and audit how beneficial our curriculum is to help transition full-stack developers to being prepared for the cka from 0 knowledge on kubernetes to being cka exam readt levell 100"
+  },
+  {
+    "session_id": "e985df0e-0af9-430d-acc7-b72656909a00",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/e985df0e-0af9-430d-acc7-b72656909a00.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "saved this in a md file in @specs/ "
+  },
+  {
+    "session_id": "e985df0e-0af9-430d-acc7-b72656909a00",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/e985df0e-0af9-430d-acc7-b72656909a00.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "Lets run a team of agents to improve our curriuclum based on our findings in what you think is priority order"
+  },
+  {
+    "session_id": "7da73774-862d-4897-94a7-ef847ce65033",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/7da73774-862d-4897-94a7-ef847ce65033.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "lets use an agent team to see how we make our cka buddy learning interface ui/ux of our tui more fun an engaging @skills/ratatui-rebels/SKILL.md "
+  },
+  {
+    "session_id": "7da73774-862d-4897-94a7-ef847ce65033",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/7da73774-862d-4897-94a7-ef847ce65033.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "i have an idea! could we also include a visual representation of kubernetes cluster but in\n  a cartoony way, that'd be dope"
   }
 ]

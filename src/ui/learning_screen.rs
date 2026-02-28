@@ -8,6 +8,7 @@ use ratatui::{
 
 use crate::app::engine::Engine;
 use crate::app::state::CompletionCard;
+use crate::content::command_info::command_blurb;
 
 use super::{
     constants::UiStyle,
@@ -217,7 +218,9 @@ fn render_main_feed(
 ) {
     let step = engine.current_step();
     let command_count = step.run_commands.len().min(5) as u16;
-    let step_panel_height = (6 + command_count).clamp(6, area.height.saturating_sub(8).max(6));
+    // Each command now takes 2 lines (blurb + command), so double the count
+    let step_panel_height =
+        (6 + command_count * 2).clamp(6, area.height.saturating_sub(8).max(6));
 
     let chunks =
         Layout::vertical([Constraint::Length(step_panel_height), Constraint::Min(4)]).split(area);
@@ -260,8 +263,13 @@ fn render_step_panel(frame: &mut Frame, area: Rect, engine: &Engine) {
     } else {
         lines.push(Line::from(Span::styled("  Runbook:", UiStyle::MUTED)));
         for (idx, cmd) in step.run_commands.iter().take(5).enumerate() {
+            let blurb = command_blurb(cmd);
             lines.push(Line::from(vec![
                 Span::styled(format!("  [{:>1}] ", idx + 1), UiStyle::MUTED),
+                Span::styled(blurb, UiStyle::TEXT_PRIMARY),
+            ]));
+            lines.push(Line::from(vec![
+                Span::raw("      "),
                 Span::styled(cmd.clone(), UiStyle::COMMAND),
             ]));
         }
@@ -404,12 +412,17 @@ fn render_activity_rail(
     if !run_commands.is_empty() {
         lines.push(Line::from(""));
         lines.push(Line::from(Span::styled(
-            "  Next Actions",
+            "  What You'll Do",
             UiStyle::HIGHLIGHT.add_modifier(Modifier::BOLD),
         )));
         for cmd in run_commands.iter().take(3) {
+            let blurb = command_blurb(cmd);
             lines.push(Line::from(vec![
                 Span::styled("  ▸ ", UiStyle::MUTED),
+                Span::styled(blurb, UiStyle::TEXT_PRIMARY),
+            ]));
+            lines.push(Line::from(vec![
+                Span::raw("    "),
                 Span::styled(cmd.clone(), UiStyle::COMMAND),
             ]));
         }

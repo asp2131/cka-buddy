@@ -377,5 +377,112 @@
       "command": "ls -la src/ui/ && echo \"---\" && grep -r \"layout::draw\" src/ && echo \"(empty = good)\" && echo \"---\" && grep -r \"UiStyle::\" src/ui/ | head -20",
       "description": "Verify file structure and old references removed"
     }
+  },
+  {
+    "session_id": "67de0528-46aa-4c7c-81ce-92a028dc4ccb",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/67de0528-46aa-4c7c-81ce-92a028dc4ccb.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "PermissionRequest",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cargo build 2>&1",
+      "timeout": 120000,
+      "description": "Build project to check for compilation errors"
+    },
+    "permission_suggestions": [
+      {
+        "type": "addRules",
+        "rules": [
+          {
+            "toolName": "Bash",
+            "ruleContent": "cargo build"
+          }
+        ],
+        "behavior": "allow",
+        "destination": "localSettings"
+      }
+    ]
+  },
+  {
+    "session_id": "e985df0e-0af9-430d-acc7-b72656909a00",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/e985df0e-0af9-430d-acc7-b72656909a00.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "PermissionRequest",
+    "tool_name": "WebSearch",
+    "tool_input": {
+      "query": "CKA exam objectives domains 2025 2026 official CNCF curriculum"
+    }
+  },
+  {
+    "session_id": "e985df0e-0af9-430d-acc7-b72656909a00",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/e985df0e-0af9-430d-acc7-b72656909a00.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "PermissionRequest",
+    "tool_name": "WebSearch",
+    "tool_input": {
+      "query": "CKA exam 2025 2026 pass rate preparation strategies difficulty"
+    }
+  },
+  {
+    "session_id": "e985df0e-0af9-430d-acc7-b72656909a00",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/e985df0e-0af9-430d-acc7-b72656909a00.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "PermissionRequest",
+    "tool_name": "WebFetch",
+    "tool_input": {
+      "url": "https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/",
+      "prompt": "Extract the exact CKA exam domains, their percentage weights, and all specific objectives/competencies listed under each domain. List everything in detail."
+    },
+    "permission_suggestions": [
+      {
+        "type": "addRules",
+        "destination": "localSettings",
+        "rules": [
+          {
+            "toolName": "WebFetch",
+            "ruleContent": "domain:training.linuxfoundation.org"
+          }
+        ],
+        "behavior": "allow"
+      }
+    ]
+  },
+  {
+    "session_id": "7da73774-862d-4897-94a7-ef847ce65033",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/7da73774-862d-4897-94a7-ef847ce65033.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "permission_mode": "default",
+    "hook_event_name": "PermissionRequest",
+    "tool_name": "AskUserQuestion",
+    "tool_input": {
+      "questions": [
+        {
+          "question": "Where should the cartoon cluster visualization live in the learning screen layout?",
+          "header": "Layout",
+          "options": [
+            {
+              "label": "Activity Rail (Recommended)",
+              "description": "Replace the current activity rail (right 30%) with an animated cluster view that updates based on the current step's domain. Shows nodes, pods, services as ASCII art boxes.",
+              "markdown": "\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 Step Panel           \u2502  \u250c\u2500NODE\u25001\u2500\u2500\u2510 \u2502\n\u2502 Objective: ...       \u2502  \u2502 \u2638 pod-a \u2502 \u2502\n\u2502 Runbook:             \u2502  \u2502 \u2638 pod-b \u2502 \u2502\n\u2502 [1] kubectl get...   \u2502  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518 \u2502\n\u2502                      \u2502  \u250c\u2500NODE\u25002\u2500\u2500\u2510 \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524  \u2502 \u2638 pod-c \u2502 \u2502\n\u2502 Terminal             \u2502  \u2502   ...   \u2502 \u2502\n\u2502 $ kubectl get pods   \u2502  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518 \u2502\n\u2502 NAME    READY  ...   \u2502  \u250c\u2500SVC\u2500\u2500\u2500\u2500\u2500\u2510 \u2502\n\u2502                      \u2502  \u2502\u2192 :8080  \u2502 \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518 \u2502\n\u2502 [V] Verify [H] Hint  \u2502  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \u2502\n\u2502 \u276f _          [READY] \u2502  ETCD \u25b0\u25b0\u25b0\u25b1\u25b1 \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518"
+            },
+            {
+              "label": "Header Expansion",
+              "description": "Expand the header from 3 rows to ~8 rows with a compact inline cluster diagram alongside readiness info. More visible but takes vertical space.",
+              "markdown": "\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 CKA BUDDY [\u2588\u2588\u2588\u2588\u2591] 85%  [STEP 15/42] \u2502\n\u2502 Deploy NGINX         [Networking]    \u2502\n\u2502                                      \u2502\n\u2502  \u250cNODE-1\u2510  \u250cNODE-2\u2510   \u250c\u2500SVC\u2500\u2500\u2510      \u2502\n\u2502  \u2502\u2638 \u2638 \u2638\u2502  \u2502\u2638 \u2638  \u2502\u2500\u2500\u25b6\u2502:8080 \u2502      \u2502\n\u2502  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2518  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2518   \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2518      \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 Step Panel ...                       \u2502"
+            },
+            {
+              "label": "Popup/Overlay Toggle",
+              "description": "Show cluster as a toggleable overlay (hotkey 'C') that appears as a popup over the learning screen. Doesn't take permanent space.",
+              "markdown": "Press 'C' to toggle:\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 CLUSTER VIEW \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502                                   \u2502\n\u2502  \u250c\u2500\u2500\u2500 CONTROL PLANE \u2500\u2500\u2500\u2510         \u2502\n\u2502  \u2502 API  ETCD  SCHED    \u2502         \u2502\n\u2502  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518         \u2502\n\u2502       \u2502          \u2502               \u2502\n\u2502  \u250c\u2500NODE\u25001\u2500\u2500\u2510 \u250c\u2500NODE\u25002\u2500\u2500\u2510        \u2502\n\u2502  \u2502 \u2638 pod-a \u2502 \u2502 \u2638 pod-c \u2502        \u2502\n\u2502  \u2502 \u2638 pod-b \u2502 \u2502 \u2638 pod-d \u2502        \u2502\n\u2502  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518 \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518        \u2502\n\u2502                                   \u2502\n\u2502  [SVC] nginx-svc \u2500\u2500\u25b6 :80        \u2502\n\u2502  [ING] app.example.com          \u2502\n\u2502                                   \u2502\n\u2502     Press C or Esc to close      \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518"
+            }
+          ],
+          "multiSelect": false
+        }
+      ]
+    }
   }
 ]

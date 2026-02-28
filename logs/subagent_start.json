@@ -52,5 +52,104 @@
     "agent_id": "a6d41730d359a25ee",
     "agent_type": "Explore",
     "logged_at": "2026-02-25T18:26:15.138667"
+  },
+  {
+    "session_id": "67de0528-46aa-4c7c-81ce-92a028dc4ccb",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/67de0528-46aa-4c7c-81ce-92a028dc4ccb.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "ac106054ffe5bcb73",
+    "agent_type": "Explore",
+    "logged_at": "2026-02-26T12:14:51.085892"
+  },
+  {
+    "session_id": "67de0528-46aa-4c7c-81ce-92a028dc4ccb",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/67de0528-46aa-4c7c-81ce-92a028dc4ccb.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "a3b63a537aea6b14d",
+    "agent_type": "general-purpose",
+    "logged_at": "2026-02-26T12:16:55.407067"
+  },
+  {
+    "session_id": "67de0528-46aa-4c7c-81ce-92a028dc4ccb",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/67de0528-46aa-4c7c-81ce-92a028dc4ccb.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "a02f136ff80fff7b9",
+    "agent_type": "builder",
+    "logged_at": "2026-02-26T12:18:18.910427"
+  },
+  {
+    "session_id": "e985df0e-0af9-430d-acc7-b72656909a00",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/e985df0e-0af9-430d-acc7-b72656909a00.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "a2974f29c8706970c",
+    "agent_type": "Explore",
+    "logged_at": "2026-02-27T21:30:51.365603"
+  },
+  {
+    "session_id": "e985df0e-0af9-430d-acc7-b72656909a00",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/e985df0e-0af9-430d-acc7-b72656909a00.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "a9a1302fb8fc4b73d",
+    "agent_type": "general-purpose",
+    "logged_at": "2026-02-27T21:33:15.996814"
+  },
+  {
+    "session_id": "e985df0e-0af9-430d-acc7-b72656909a00",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/e985df0e-0af9-430d-acc7-b72656909a00.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "ab735d7c29ddc2122",
+    "agent_type": "general-purpose",
+    "logged_at": "2026-02-27T21:33:38.861251"
+  },
+  {
+    "session_id": "e985df0e-0af9-430d-acc7-b72656909a00",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/e985df0e-0af9-430d-acc7-b72656909a00.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "a89a633ac1cd686a2",
+    "agent_type": "general-purpose",
+    "logged_at": "2026-02-27T21:33:54.403058"
+  },
+  {
+    "session_id": "e985df0e-0af9-430d-acc7-b72656909a00",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/e985df0e-0af9-430d-acc7-b72656909a00.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "a1f583cb4bb9d9ddd",
+    "agent_type": "builder",
+    "logged_at": "2026-02-27T21:42:16.894276"
+  },
+  {
+    "session_id": "7da73774-862d-4897-94a7-ef847ce65033",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/7da73774-862d-4897-94a7-ef847ce65033.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "af5915960273c8851",
+    "agent_type": "Explore",
+    "logged_at": "2026-02-27T21:46:38.653623"
+  },
+  {
+    "session_id": "7da73774-862d-4897-94a7-ef847ce65033",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/7da73774-862d-4897-94a7-ef847ce65033.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "a59e84c40dbe09dd4",
+    "agent_type": "Explore",
+    "logged_at": "2026-02-27T21:46:45.433242"
+  },
+  {
+    "session_id": "7da73774-862d-4897-94a7-ef847ce65033",
+    "transcript_path": "/Users/akinpound/.claude/projects/-Users-akinpound-Documents-cka-buddy/7da73774-862d-4897-94a7-ef847ce65033.jsonl",
+    "cwd": "/Users/akinpound/Documents/cka-buddy",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "a7f7074a6963e4174",
+    "agent_type": "Explore",
+    "logged_at": "2026-02-27T21:51:53.109461"
   }
 ]

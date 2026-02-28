@@ -74,9 +74,17 @@ objective: Add a volume mount to the backend deployment so it can persist data.
 ready_weight: 3
 commands:
   - kubectl -n two-tier get deployment backend -o yaml > /tmp/backend-vol.yaml
-  - "echo 'Edit /tmp/backend-vol.yaml to add volumes and volumeMounts:'"
-  - "echo '  spec.template.spec.volumes: [{name: db-storage, persistentVolumeClaim: {claimName: backend-pvc}}]'"
-  - "echo '  spec.template.spec.containers[0].volumeMounts: [{name: db-storage, mountPath: /data}]'"
+  - "echo 'In /tmp/backend-vol.yaml, add these exact blocks (copy/paste-safe):'"
+  - "echo 'Under spec.template.spec (same level as containers:):'"
+  - "echo '      volumes:'"
+  - "echo '      - name: db-storage'"
+  - "echo '        persistentVolumeClaim:'"
+  - "echo '          claimName: backend-pvc'"
+  - "echo 'Under spec.template.spec.containers[0] (same level as image:):'"
+  - "echo '        volumeMounts:'"
+  - "echo '        - name: db-storage'"
+  - "echo '          mountPath: /data'"
+  - vi /tmp/backend-vol.yaml
   - kubectl apply -f /tmp/backend-vol.yaml
 success_check:
   - kubectl -n two-tier get pod -l app=backend -o jsonpath='{.items[0].spec.containers[0].volumeMounts[0].mountPath}'
@@ -85,7 +93,7 @@ success_contains:
 what_changed:
   - Backend pod restarted with PVC mounted at /data
   - Any data written to /data survives pod restarts
-fallback_hint: volumeMounts.name must match volumes.name exactly.
+fallback_hint: Indentation must be spaces, not tabs. volumeMounts.name must exactly match volumes.name.
 ```
 
 ```cka-step
@@ -133,6 +141,7 @@ title: taint and toleration drill
 objective: Taint a node and verify that only tolerant pods schedule on it.
 ready_weight: 2
 commands:
+  - "echo 'WARNING: On single-node clusters, this can block scheduling for new pods until you remove the taint in the next step.'"
   - kubectl get nodes -o name | head -1 | xargs -I{} kubectl taint {} maintenance=true:NoSchedule
   - kubectl -n two-tier run taint-test --image=busybox --command -- sleep 3600
   - kubectl -n two-tier get pod taint-test
@@ -143,6 +152,7 @@ success_contains:
 what_changed:
   - Node tainted with maintenance=true:NoSchedule
   - Pod taint-test is Pending because it has no toleration
+  - You must remove this taint in p02-s07 before continuing normal work
 fallback_hint: On a single-node kind cluster, any taint blocks all new pods without tolerations.
 ```
 
@@ -153,15 +163,17 @@ objective: Remove the taint so the cluster returns to normal. Clean up the test 
 ready_weight: 2
 commands:
   - kubectl get nodes -o name | head -1 | xargs -I{} kubectl taint {} maintenance=true:NoSchedule-
-  - kubectl -n two-tier delete pod taint-test
+  - kubectl -n two-tier delete pod taint-test --ignore-not-found
+  - kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" taints="}{.spec.taints}{"\n"}{end}'
 success_check:
-  - kubectl -n two-tier get pods -l app=backend -o jsonpath='{.items[0].status.phase}'
+  - kubectl get nodes -o custom-columns=NAME:.metadata.name,TAINTS:.spec.taints --no-headers
 success_contains:
-  - Running
+  - <none>
 what_changed:
   - Taint removed (trailing minus sign removes a taint)
   - Test pod cleaned up, app pods unaffected
-fallback_hint: The minus at the end of the taint spec removes it — key=value:effect-
+  - Verified maintenance taint is no longer present on nodes
+fallback_hint: If taints are still present, rerun the remove command exactly with the trailing minus: maintenance=true:NoSchedule-
 ```
 
 ```cka-step

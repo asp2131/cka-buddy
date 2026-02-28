@@ -37,14 +37,16 @@ title: install kind
 objective: Install the kind CLI so you can create local clusters.
 ready_weight: 1
 commands:
-  - brew install kind
+  - 'echo "OS check: $(uname -s)"'
+  - '[ "$(uname -s)" = "Darwin" ] && brew install kind || true'
+  - '[ "$(uname -s)" = "Linux" ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind || true'
 success_check:
   - kind --version
 success_contains:
   - kind
 what_changed:
   - kind CLI available in PATH
-fallback_hint: On Linux use "go install sigs.k8s.io/kind@latest" or download the binary from the kind releases page.
+fallback_hint: Windows (PowerShell): winget install Kubernetes.kind. If your architecture is not amd64, download the correct kind binary from the official releases page and place it in your PATH.
 ```
 
 ```cka-step
@@ -53,14 +55,16 @@ title: install kubectl
 objective: Install kubectl so you can talk to any Kubernetes cluster.
 ready_weight: 1
 commands:
-  - brew install kubectl
+  - 'echo "OS check: $(uname -s)"'
+  - '[ "$(uname -s)" = "Darwin" ] && brew install kubectl || true'
+  - '[ "$(uname -s)" = "Linux" ] && curl -LO https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/ || true'
 success_check:
   - kubectl version --client --short 2>/dev/null || kubectl version --client
 success_contains:
   - Client Version
 what_changed:
   - kubectl CLI available in PATH
-fallback_hint: On Linux use "curl -LO https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/"
+fallback_hint: Windows (PowerShell): winget install -e --id Kubernetes.kubectl. If your architecture is not amd64, use the matching kubectl binary for your OS/CPU from dl.k8s.io and move it into your PATH.
 ```
 
 ```cka-step
@@ -126,13 +130,13 @@ commands:
   - kubectl describe pod hello
   - kubectl logs hello
 success_check:
-  - kubectl logs hello
+  - kubectl get pod hello -o jsonpath='{.status.containerStatuses[0].ready}'
 success_contains:
-  - ""
+  - "true"
 what_changed:
   - Nothing changed — these are read-only inspection commands
   - You saw events (scheduling, pulling, starting) and container stdout
-fallback_hint: describe shows events at the bottom — scroll down to see them.
+fallback_hint: If Ready is false, run "kubectl describe pod hello" and check the Events section for pull/start errors.
 ```
 
 ```cka-step
