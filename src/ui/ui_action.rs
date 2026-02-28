@@ -18,4 +18,8 @@ pub enum UiAction {
     DismissPopup,
     RunCommand(String),
     ForceRunCommand(String),
+    SetCommandInput(String),
+    SetPanelIndex { index: usize },
+    NextPanelIndex,
+    PreviousPanelIndex,
 }
