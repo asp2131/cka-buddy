@@ -10,7 +10,7 @@ use crate::app::engine::Engine;
 
 use super::{
     constants::centered_clamped_viewport, learning_screen::LearningScreen, popup::PopupMessage,
-    splash_screen::SplashScreen, traits::Screen, ui_action::UiAction,
+    splash_screen::SplashScreen, traits::Screen, ui_action::UiAction, ui_frame::UiFrame,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -62,23 +62,25 @@ impl UiScreen {
 
     pub fn render(&mut self, frame: &mut Frame, engine: &Engine) -> Result<()> {
         let area = centered_clamped_viewport(frame.area());
+        let mut ui_frame = UiFrame::new(frame, area, None);
         match self.state {
-            ScreenState::Splash => self.splash.render(frame, engine, area)?,
-            ScreenState::Learning => self.learning.render(frame, engine, area)?,
+            ScreenState::Splash => self.splash.render(&mut ui_frame, engine, area)?,
+            ScreenState::Learning => self.learning.render(&mut ui_frame, engine, area)?,
         }
 
         if let Some(popup) = self.popup_stack.last() {
-            frame.render_widget(Clear, area);
-            frame.render_widget(
+            let f = ui_frame.inner_frame();
+            f.render_widget(Clear, area);
+            f.render_widget(
                 ratatui::widgets::Block::default()
                     .style(Style::default().bg(Color::Rgb(14, 18, 28))),
                 area,
             );
             match self.state {
-                ScreenState::Splash => self.splash.render(frame, engine, area)?,
-                ScreenState::Learning => self.learning.render(frame, engine, area)?,
+                ScreenState::Splash => self.splash.render(&mut ui_frame, engine, area)?,
+                ScreenState::Learning => self.learning.render(&mut ui_frame, engine, area)?,
             }
-            popup.render(frame, area);
+            popup.render(ui_frame.inner_frame(), area);
         }
 
         Ok(())

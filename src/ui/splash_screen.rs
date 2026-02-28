@@ -2,7 +2,6 @@ use std::time::{Duration, Instant};
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    Frame,
     layout::{Constraint, Flex, Layout, Rect},
     text::{Line, Span},
     widgets::{Block, Paragraph, Wrap},
@@ -10,7 +9,7 @@ use ratatui::{
 
 use crate::app::engine::Engine;
 
-use super::{button::Button, constants::UiStyle, traits::Screen, ui_action::UiAction};
+use super::{button::Button, constants::UiStyle, traits::Screen, ui_action::UiAction, ui_frame::UiFrame};
 
 const TITLE: [&str; 6] = [
     " ██████╗██╗  ██╗ █████╗     ██████╗ ██╗   ██╗██████╗ ██████╗ ██╗   ██╗",
@@ -93,7 +92,7 @@ impl Screen for SplashScreen {
         Ok(())
     }
 
-    fn render(&mut self, frame: &mut Frame, engine: &Engine, area: Rect) -> anyhow::Result<()> {
+    fn render(&mut self, frame: &mut UiFrame, engine: &Engine, area: Rect) -> anyhow::Result<()> {
         let chunks = Layout::vertical([
             Constraint::Length(1),
             Constraint::Length(TITLE.len() as u16 + 2),
@@ -105,12 +104,14 @@ impl Screen for SplashScreen {
         .flex(Flex::Center)
         .split(area);
 
+        let f = frame.inner_frame();
+
         let title_block = Block::bordered().border_style(UiStyle::BORDER);
         let title_lines = TITLE
             .iter()
             .map(|line| Line::from(Span::styled(*line, UiStyle::HEADER)))
             .collect::<Vec<_>>();
-        frame.render_widget(
+        f.render_widget(
             Paragraph::new(title_lines)
                 .block(title_block)
                 .centered()
@@ -118,7 +119,7 @@ impl Screen for SplashScreen {
             chunks[1],
         );
 
-        frame.render_widget(
+        f.render_widget(
             Paragraph::new(Line::from(vec![
                 Span::styled("Kubernetes Exam Preparation", UiStyle::TEXT_SECONDARY),
                 Span::raw("  "),
@@ -132,7 +133,7 @@ impl Screen for SplashScreen {
             .flex(Flex::Center)
             .split(chunks[3]);
         for (idx, item) in self.menu.iter().enumerate() {
-            frame.render_widget(
+            f.render_widget(
                 Button::new(Self::menu_label(*item)).selected(idx == self.selected),
                 menu_rows[idx],
             );
@@ -142,7 +143,7 @@ impl Screen for SplashScreen {
             let percent = engine.readiness;
             let done = engine.progress.completed.len();
             let total = engine.steps.len();
-            frame.render_widget(
+            f.render_widget(
                 Paragraph::new(Line::from(vec![
                     Span::styled(format!("{percent}% ready"), UiStyle::OK),
                     Span::styled(
@@ -155,7 +156,7 @@ impl Screen for SplashScreen {
             );
         }
 
-        frame.render_widget(
+        f.render_widget(
             Paragraph::new(Line::from(vec![
                 Span::styled("\"", UiStyle::MUTED),
                 Span::styled(QUOTES[self.quote_index], UiStyle::TEXT_SECONDARY),

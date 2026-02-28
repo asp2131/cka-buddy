@@ -14,6 +14,7 @@ use super::{
     constants::UiStyle,
     traits::Screen,
     ui_action::UiAction,
+    ui_frame::UiFrame,
     widgets::{
         default_block, difficulty_badge, domain_tag, ellipsize, footer_help_text, mode_badge,
         readiness_segments, step_type_badge, titled_block,
@@ -49,7 +50,7 @@ impl Screen for LearningScreen {
         Ok(())
     }
 
-    fn render(&mut self, frame: &mut Frame, engine: &Engine, area: Rect) -> anyhow::Result<()> {
+    fn render(&mut self, frame: &mut UiFrame, engine: &Engine, area: Rect) -> anyhow::Result<()> {
         let zones = Layout::vertical([
             Constraint::Length(3),
             Constraint::Min(0),
@@ -57,14 +58,15 @@ impl Screen for LearningScreen {
         ])
         .split(area);
 
-        render_header(frame, zones[0], engine);
+        let f = frame.inner_frame();
+        render_header(f, zones[0], engine);
 
         if zones[1].width >= WIDE_TERMINAL_THRESHOLD {
             let split =
                 Layout::horizontal([Constraint::Percentage(70), Constraint::Percentage(30)])
                     .split(zones[1]);
             render_main_feed(
-                frame,
+                f,
                 split[0],
                 engine,
                 &self.status,
@@ -73,7 +75,7 @@ impl Screen for LearningScreen {
                 self.completion_card.as_ref(),
             );
             render_activity_rail(
-                frame,
+                f,
                 split[1],
                 engine.current_step().run_commands.as_slice(),
                 self.hint_message.as_deref(),
@@ -82,7 +84,7 @@ impl Screen for LearningScreen {
             );
         } else {
             render_main_feed(
-                frame,
+                f,
                 zones[1],
                 engine,
                 &self.status,
@@ -92,7 +94,7 @@ impl Screen for LearningScreen {
             );
         }
 
-        render_command_bar(frame, zones[2], &self.command_input, &self.status);
+        render_command_bar(f, zones[2], &self.command_input, &self.status);
         Ok(())
     }
 

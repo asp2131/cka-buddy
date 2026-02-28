@@ -334,6 +334,12 @@ fn run_loop(
                 ui.learning.hint_message = None;
                 ui.learning.completion_card = None;
             }
+            UiAction::SetCommandInput(text) => {
+                ui.learning.command_input = text;
+            }
+            UiAction::SetPanelIndex { .. }
+            | UiAction::NextPanelIndex
+            | UiAction::PreviousPanelIndex => {}
         }
     }
 
