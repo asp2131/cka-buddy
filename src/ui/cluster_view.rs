@@ -70,7 +70,7 @@ impl Default for ControlPlane {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ClusterScene {
     pub control_plane: ControlPlane,
     pub nodes: Vec<Node>,
@@ -81,19 +81,6 @@ pub struct ClusterScene {
     pub flash_remaining: usize,
 }
 
-impl Default for ClusterScene {
-    fn default() -> Self {
-        Self {
-            control_plane: ControlPlane::default(),
-            nodes: vec![],
-            services: vec![],
-            extras: vec![],
-            tick: 0,
-            domain: String::new(),
-            flash_remaining: 0,
-        }
-    }
-}
 
 impl ClusterScene {
     pub fn for_domain(domain: &str, commands: &[String], completed_count: usize) -> Self {
@@ -166,7 +153,7 @@ impl ClusterScene {
                     pods: if first.is_empty() {
                         vec![Pod { name: "web-0".into(), status: PodStatus::Running }, Pod { name: "web-1".into(), status: PodStatus::Pending }]
                     } else {
-                        make_pods(&first.to_vec(), 0)
+                        make_pods(first, 0)
                     },
                     status: ComponentState::Healthy,
                 },
@@ -175,7 +162,7 @@ impl ClusterScene {
                     pods: if second.is_empty() {
                         vec![Pod { name: "worker-0".into(), status: PodStatus::Running }]
                     } else {
-                        make_pods(&second.to_vec(), half)
+                        make_pods(second, half)
                     },
                     status: ComponentState::Healthy,
                 },
@@ -427,7 +414,7 @@ impl Widget for &ClusterScene {
             used += cp_h;
         }
 
-        if used + 1 <= budget {
+        if used < budget {
             let mid = area.x + (w as u16) / 2;
             buf.set_string(mid, y, "│", UiStyle::BORDER);
             y += 1;
@@ -534,7 +521,7 @@ fn render_control_plane(
         buf.set_string(offset + 8, y + 2, component_icon(cp.scheduler, tick), component_style(cp.scheduler));
         buf.set_string(offset + 15, y + 2, component_icon(cp.controller, tick), component_style(cp.controller));
 
-        let bottom = format!("└{}┘", "─".repeat(box_w.saturating_sub(2).max(0)));
+        let bottom = format!("└{}┘", "─".repeat(box_w.saturating_sub(2)));
         buf.set_string(offset, y + 3, &bottom, accent);
     } else {
         let compact = format!(
@@ -562,7 +549,7 @@ fn render_node(
     let inner_w = box_w.saturating_sub(4);
 
     let name = ellipsize(&node.name.to_uppercase(), box_w.saturating_sub(4));
-    let top = format!("┌─{}─{}┐", name, "─".repeat(box_w.saturating_sub(name.len() + 4).max(0)));
+    let top = format!("┌─{}─{}┐", name, "─".repeat(box_w.saturating_sub(name.len() + 4)));
     let node_style = component_style(node.status);
     buf.set_string(offset, y, &top[..top.len().min(box_w + 1)], node_style);
 
@@ -577,7 +564,7 @@ fn render_node(
     }
 
     let pod_count = node.pods.len().min(4);
-    let bottom = format!("└{}┘", "─".repeat(box_w.saturating_sub(2).max(0)));
+    let bottom = format!("└{}┘", "─".repeat(box_w.saturating_sub(2)));
     buf.set_string(offset, y + 1 + pod_count as u16, &bottom, node_style);
 }
 
@@ -627,17 +614,17 @@ fn render_extra(
             let filled = bar_w * 7 / 10;
             let empty = bar_w - filled;
             let offset = x + 1;
-            buf.set_string(offset, y, &format!("  {}", label), UiStyle::TEXT_PRIMARY);
+            buf.set_string(offset, y, format!("  {}", label), UiStyle::TEXT_PRIMARY);
             let bar = format!("  {}{}", "▰".repeat(filled), "▱".repeat(empty));
-            buf.set_string(offset, y + 1, &bar, accent);
+            buf.set_string(offset, y + 1, bar, accent);
         }
         ExtraResource::NetworkPolicy { name } => {
             let label = format!("⊠ NetPol: {}", ellipsize(name, w.saturating_sub(14)));
-            buf.set_string(x + 1, y, &format!("  {}", label), accent);
+            buf.set_string(x + 1, y, format!("  {}", label), accent);
         }
         ExtraResource::Secret { name } => {
             let label = format!("⊠ Secret: {}", ellipsize(name, w.saturating_sub(14)));
-            buf.set_string(x + 1, y, &format!("  {}", label), UiStyle::WARNING);
+            buf.set_string(x + 1, y, format!("  {}", label), UiStyle::WARNING);
         }
         ExtraResource::ConfigMap { name } => {
             let label = format!("  CM: {}", ellipsize(name, w.saturating_sub(10)));

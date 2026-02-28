@@ -18,25 +18,13 @@ struct KeyCallback {
     layer: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct CallbackRegistry {
     mouse_callbacks: Vec<MouseCallback>,
     keyboard_callbacks: Vec<KeyCallback>,
     mouse_position: Option<(u16, u16)>,
     active_layer: usize,
     hover_text: Option<String>,
-}
-
-impl Default for CallbackRegistry {
-    fn default() -> Self {
-        Self {
-            mouse_callbacks: Vec::new(),
-            keyboard_callbacks: Vec::new(),
-            mouse_position: None,
-            active_layer: 0,
-            hover_text: None,
-        }
-    }
 }
 
 impl CallbackRegistry {

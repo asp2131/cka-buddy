@@ -104,10 +104,10 @@ impl InteractiveWidget for ClickableList<'_> {
     }
 
     fn hover_text(&self) -> String {
-        if let Some(idx) = self.hover_index {
-            if let Some(item) = self.items.get(idx) {
-                return item.description.clone();
-            }
+        if let Some(idx) = self.hover_index
+            && let Some(item) = self.items.get(idx)
+        {
+            return item.description.clone();
         }
         String::new()
     }

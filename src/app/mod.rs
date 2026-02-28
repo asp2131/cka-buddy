@@ -329,12 +329,12 @@ fn handle_action(
                     "Shell mode switch: now using {} runner",
                     parsed.as_str()
                 ));
-                if parsed == ShellMode::External {
-                    if let Some(connect_cmd) = shell.external_connect_command() {
-                        ui.learning
-                            .output_log
-                            .push(format!("External shell pairing command: {connect_cmd}"));
-                    }
+                if parsed == ShellMode::External
+                    && let Some(connect_cmd) = shell.external_connect_command()
+                {
+                    ui.learning
+                        .output_log
+                        .push(format!("External shell pairing command: {connect_cmd}"));
                 }
             }
             None => {

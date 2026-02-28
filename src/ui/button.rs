@@ -124,12 +124,11 @@ impl InteractiveWidget for Button<'_> {
                 self.layer,
             );
         }
-        if let Some(key) = self.hotkey {
-            if self.command_input_empty {
-                if let Some(ref action) = self.on_click {
-                    registry.register_keyboard_callback(key, action.clone(), self.layer);
-                }
-            }
+        if let Some(key) = self.hotkey
+            && self.command_input_empty
+            && let Some(ref action) = self.on_click
+        {
+            registry.register_keyboard_callback(key, action.clone(), self.layer);
         }
         self.is_hovered = registry.is_hovering(area);
     }

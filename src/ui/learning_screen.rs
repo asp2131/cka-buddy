@@ -257,6 +257,7 @@ fn render_header(frame: &mut UiFrame, area: Rect, engine: &Engine) {
     frame.render_widget(Paragraph::new(header), inner);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_main_feed(
     frame: &mut UiFrame,
     area: Rect,
