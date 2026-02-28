@@ -1,3 +1,4 @@
+use crossterm::event::KeyCode;
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
@@ -11,6 +12,9 @@ use crate::app::state::CompletionCard;
 use crate::content::command_info::command_blurb;
 
 use super::{
+    button::Button,
+    clickable_list::{ClickableList, ClickableListItem},
+    cluster_view::ClusterScene,
     constants::UiStyle,
     traits::Screen,
     ui_action::UiAction,
@@ -30,6 +34,8 @@ pub struct LearningScreen {
     pub hint_message: Option<String>,
     pub completion_card: Option<CompletionCard>,
     pub tab_index: usize,
+    pub cluster_scene: ClusterScene,
+    pub scroll_offset: usize,
 }
 
 impl LearningScreen {
@@ -41,12 +47,22 @@ impl LearningScreen {
             hint_message: None,
             completion_card: None,
             tab_index: 0,
+            cluster_scene: ClusterScene::default(),
+            scroll_offset: 0,
         }
+    }
+
+    pub fn rebuild_cluster_scene(&mut self, engine: &Engine) {
+        let step = engine.current_step();
+        let domain = step.domains.first().map(|s| s.as_str()).unwrap_or("cluster");
+        let completed = engine.progress.completed.len();
+        self.cluster_scene = ClusterScene::for_domain(domain, &step.run_commands, completed);
     }
 }
 
 impl Screen for LearningScreen {
     fn update(&mut self, _engine: &Engine) -> anyhow::Result<()> {
+        self.cluster_scene.tick();
         Ok(())
     }
 
@@ -58,43 +74,62 @@ impl Screen for LearningScreen {
         ])
         .split(area);
 
-        let f = frame.inner_frame();
-        render_header(f, zones[0], engine);
+        render_header(frame, zones[0], engine);
 
         if zones[1].width >= WIDE_TERMINAL_THRESHOLD {
             let split =
                 Layout::horizontal([Constraint::Percentage(70), Constraint::Percentage(30)])
                     .split(zones[1]);
+
+            let main_chunks = Layout::vertical([
+                Constraint::Min(0),
+                Constraint::Length(3),
+            ])
+            .split(split[0]);
+
             render_main_feed(
-                f,
-                split[0],
+                frame,
+                main_chunks[0],
                 engine,
                 &self.status,
                 &self.output_log,
                 self.hint_message.as_deref(),
                 self.completion_card.as_ref(),
+                &self.command_input,
+                self.scroll_offset,
             );
-            render_activity_rail(
-                f,
+            render_action_buttons(frame, main_chunks[1], &self.command_input);
+
+            render_cluster_rail(
+                frame,
                 split[1],
-                engine.current_step().run_commands.as_slice(),
+                &self.cluster_scene,
                 self.hint_message.as_deref(),
                 self.completion_card.as_ref(),
                 &self.status,
             );
         } else {
+            let main_chunks = Layout::vertical([
+                Constraint::Min(0),
+                Constraint::Length(3),
+            ])
+            .split(zones[1]);
+
             render_main_feed(
-                f,
-                zones[1],
+                frame,
+                main_chunks[0],
                 engine,
                 &self.status,
                 &self.output_log,
                 self.hint_message.as_deref(),
                 self.completion_card.as_ref(),
+                &self.command_input,
+                self.scroll_offset,
             );
+            render_action_buttons(frame, main_chunks[1], &self.command_input);
         }
 
-        render_command_bar(f, zones[2], &self.command_input, &self.status);
+        render_command_bar(frame.inner_frame(), zones[2], &self.command_input, &self.status);
         Ok(())
     }
 
@@ -163,9 +198,22 @@ impl Screen for LearningScreen {
     fn footer_help(&self) -> String {
         footer_help_text(&self.command_input)
     }
+
+    fn footer_spans(&self) -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("V", "Verify"),
+            ("H", "Hint"),
+            ("S", "Suggest"),
+            ("→", "Next"),
+            ("←", "Prev"),
+            ("?", "Help"),
+            ("Esc", "Clear"),
+            ("Enter", "Run"),
+        ]
+    }
 }
 
-fn render_header(frame: &mut Frame, area: Rect, engine: &Engine) {
+fn render_header(frame: &mut UiFrame, area: Rect, engine: &Engine) {
     let step = engine.current_step();
     let block = default_block();
     let inner = block.inner(area);
@@ -210,34 +258,41 @@ fn render_header(frame: &mut Frame, area: Rect, engine: &Engine) {
 }
 
 fn render_main_feed(
-    frame: &mut Frame,
+    frame: &mut UiFrame,
     area: Rect,
     engine: &Engine,
     _status: &str,
     output_log: &[String],
     hint_message: Option<&str>,
     completion_card: Option<&CompletionCard>,
+    command_input: &str,
+    scroll_offset: usize,
 ) {
     let step = engine.current_step();
     let command_count = step.run_commands.len().min(5) as u16;
-    // Each command now takes 2 lines (blurb + command), so double the count
     let step_panel_height =
-        (6 + command_count * 2).clamp(6, area.height.saturating_sub(8).max(6));
+        (6 + command_count).clamp(6, area.height.saturating_sub(8).max(6));
 
     let chunks =
         Layout::vertical([Constraint::Length(step_panel_height), Constraint::Min(4)]).split(area);
 
-    render_step_panel(frame, chunks[0], engine);
-    render_terminal_feed(frame, chunks[1], output_log, hint_message, completion_card);
+    render_step_panel(frame, chunks[0], engine, command_input, scroll_offset);
+    render_terminal_feed(frame.inner_frame(), chunks[1], output_log, hint_message, completion_card);
 }
 
-fn render_step_panel(frame: &mut Frame, area: Rect, engine: &Engine) {
+fn render_step_panel(
+    frame: &mut UiFrame,
+    area: Rect,
+    engine: &Engine,
+    _command_input: &str,
+    scroll_offset: usize,
+) {
     let step = engine.current_step();
     let block = titled_block("Step");
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    let mut lines = vec![
+    let objective_lines = vec![
         Line::from(vec![
             Span::styled("  Objective: ", UiStyle::MUTED),
             Span::styled(
@@ -257,27 +312,117 @@ fn render_step_panel(frame: &mut Frame, area: Rect, engine: &Engine) {
         Line::from(""),
     ];
 
-    if step.run_commands.is_empty() {
-        lines.push(Line::from(Span::styled(
-            "  (no suggested commands — use objective + docs)",
-            UiStyle::MUTED,
-        )));
-    } else {
-        lines.push(Line::from(Span::styled("  Runbook:", UiStyle::MUTED)));
-        for (idx, cmd) in step.run_commands.iter().take(5).enumerate() {
-            let blurb = command_blurb(cmd);
-            lines.push(Line::from(vec![
-                Span::styled(format!("  [{:>1}] ", idx + 1), UiStyle::MUTED),
-                Span::styled(blurb, UiStyle::TEXT_PRIMARY),
-            ]));
-            lines.push(Line::from(vec![
-                Span::raw("      "),
-                Span::styled(cmd.clone(), UiStyle::COMMAND),
-            ]));
-        }
+    let obj_height = objective_lines.len() as u16;
+    let obj_area = Rect::new(inner.x, inner.y, inner.width, obj_height.min(inner.height));
+    frame.render_widget(Paragraph::new(objective_lines).wrap(Wrap { trim: true }), obj_area);
+
+    let remaining_height = inner.height.saturating_sub(obj_height);
+    if remaining_height == 0 {
+        return;
     }
 
-    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
+    let list_area = Rect::new(
+        inner.x,
+        inner.y + obj_height,
+        inner.width,
+        remaining_height,
+    );
+
+    if step.run_commands.is_empty() {
+        frame.render_widget(
+            Paragraph::new(Line::from(Span::styled(
+                "  (no suggested commands — use objective + docs)",
+                UiStyle::MUTED,
+            ))),
+            list_area,
+        );
+    } else {
+        let items: Vec<ClickableListItem> = step
+            .run_commands
+            .iter()
+            .take(5)
+            .map(|cmd| ClickableListItem {
+                label: cmd.clone(),
+                description: command_blurb(cmd).to_string(),
+                on_click: UiAction::SetCommandInput(cmd.clone()),
+            })
+            .collect();
+
+        let title_line_area = Rect::new(list_area.x, list_area.y, list_area.width, 1);
+        frame.render_widget(
+            Paragraph::new(Line::from(Span::styled("  Runbook (click to load):", UiStyle::MUTED))),
+            title_line_area,
+        );
+
+        let clickable_area = Rect::new(
+            list_area.x + 2,
+            list_area.y + 1,
+            list_area.width.saturating_sub(2),
+            list_area.height.saturating_sub(1),
+        );
+
+        if clickable_area.height > 0 {
+            let list = ClickableList::new(&items).scroll_offset(scroll_offset);
+            frame.render_interactive_widget(list, clickable_area);
+        }
+    }
+}
+
+fn render_action_buttons(frame: &mut UiFrame, area: Rect, command_input: &str) {
+    let input_empty = command_input.is_empty();
+    let block = Block::default()
+        .borders(Borders::TOP)
+        .border_style(UiStyle::BORDER);
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    if inner.height == 0 || inner.width < 30 {
+        return;
+    }
+
+    let buttons_area = Layout::horizontal([
+        Constraint::Percentage(20),
+        Constraint::Percentage(20),
+        Constraint::Percentage(20),
+        Constraint::Percentage(20),
+        Constraint::Percentage(20),
+    ])
+    .split(inner);
+
+    let verify = Button::new("Verify")
+        .hotkey(KeyCode::Char('v'))
+        .on_click(UiAction::Verify)
+        .hover_text("Run verification checks for current step")
+        .command_input_empty(input_empty);
+    frame.render_interactive_widget(verify, buttons_area[0]);
+
+    let hint = Button::new("Hint")
+        .hotkey(KeyCode::Char('h'))
+        .on_click(UiAction::Hint)
+        .hover_text("Get a contextual hint from the coach")
+        .command_input_empty(input_empty);
+    frame.render_interactive_widget(hint, buttons_area[1]);
+
+    let suggest = Button::new("Suggest")
+        .hotkey(KeyCode::Char('s'))
+        .on_click(UiAction::Suggest(None))
+        .hover_text("Load next suggested command")
+        .command_input_empty(input_empty);
+    frame.render_interactive_widget(suggest, buttons_area[2]);
+
+    let next = Button::new("Next →")
+        .hotkey(KeyCode::Right)
+        .on_click(UiAction::NextStep)
+        .hover_text("Go to next step")
+        .command_input_empty(input_empty);
+    frame.render_interactive_widget(next, buttons_area[3]);
+
+    let prev = Button::new("← Prev")
+        .hotkey(KeyCode::Left)
+        .on_click(UiAction::PrevStep)
+        .hover_text("Go to previous step")
+        .command_input_empty(input_empty);
+    frame.render_interactive_widget(prev, buttons_area[4]);
 }
 
 fn render_terminal_feed(
@@ -367,70 +512,59 @@ fn status_badge(status: &str) -> (&'static str, ratatui::style::Style) {
     (label, style.add_modifier(Modifier::BOLD))
 }
 
-fn render_activity_rail(
-    frame: &mut Frame,
+fn render_cluster_rail(
+    frame: &mut UiFrame,
     area: Rect,
-    run_commands: &[String],
+    cluster_scene: &ClusterScene,
     hint_message: Option<&str>,
     completion_card: Option<&CompletionCard>,
     status: &str,
 ) {
-    let block = titled_block("Activity");
+    let block = titled_block("Cluster");
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
+    if inner.height < 6 {
+        return;
+    }
+
+    let status_height = 6u16;
+    let cluster_height = inner.height.saturating_sub(status_height);
+
+    let sections = Layout::vertical([
+        Constraint::Length(cluster_height),
+        Constraint::Length(status_height),
+    ])
+    .split(inner);
+
+    frame.render_widget(cluster_scene, sections[0]);
+
     let (status_label, status_style) = status_badge(status);
-    let mut lines = vec![Line::from(vec![
+    let mut status_lines = vec![Line::from(vec![
         Span::styled("  Status ", UiStyle::MUTED),
         Span::styled(format!("[{status_label}]"), status_style),
-        Span::raw(" "),
-        Span::styled(status.to_string(), UiStyle::TEXT_PRIMARY),
     ])];
 
     if let Some(hint) = hint_message {
-        lines.push(Line::from(""));
-        lines.push(Line::from(Span::styled(
-            "  Hint",
-            UiStyle::WARNING.add_modifier(Modifier::BOLD),
-        )));
-        lines.push(Line::from(Span::styled(
-            format!("  {hint}"),
-            UiStyle::WARNING,
-        )));
+        let truncated = ellipsize(hint, (sections[1].width as usize).saturating_sub(4));
+        status_lines.push(Line::from(vec![
+            Span::styled("  Hint: ", UiStyle::WARNING),
+            Span::styled(truncated, UiStyle::WARNING),
+        ]));
     }
 
     if let Some(card) = completion_card {
-        lines.push(Line::from(""));
-        lines.push(Line::from(Span::styled(
-            "  Verify Result",
-            UiStyle::OK.add_modifier(Modifier::BOLD),
-        )));
-        lines.push(Line::from(Span::styled(
-            format!("  {}", card.done),
-            UiStyle::OK,
-        )));
+        let truncated = ellipsize(&card.done, (sections[1].width as usize).saturating_sub(4));
+        status_lines.push(Line::from(vec![
+            Span::styled("  ✓ ", UiStyle::OK),
+            Span::styled(truncated, UiStyle::OK),
+        ]));
     }
 
-    if !run_commands.is_empty() {
-        lines.push(Line::from(""));
-        lines.push(Line::from(Span::styled(
-            "  What You'll Do",
-            UiStyle::HIGHLIGHT.add_modifier(Modifier::BOLD),
-        )));
-        for cmd in run_commands.iter().take(3) {
-            let blurb = command_blurb(cmd);
-            lines.push(Line::from(vec![
-                Span::styled("  ▸ ", UiStyle::MUTED),
-                Span::styled(blurb, UiStyle::TEXT_PRIMARY),
-            ]));
-            lines.push(Line::from(vec![
-                Span::raw("    "),
-                Span::styled(cmd.clone(), UiStyle::COMMAND),
-            ]));
-        }
-    }
-
-    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
+    frame.render_widget(
+        Paragraph::new(status_lines).wrap(Wrap { trim: true }),
+        sections[1],
+    );
 }
 
 fn render_command_bar(frame: &mut Frame, area: Rect, command_input: &str, status: &str) {
