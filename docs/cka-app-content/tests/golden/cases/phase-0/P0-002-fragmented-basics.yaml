@@ -1,0 +1,43 @@
+id: P0-002-fragmented-basics
+phase: 0
+title: Incomplete baseline check with missing context
+status: active
+tags:
+  - baseline
+  - context-miss
+  - partial
+learner_profile:
+  level: novice
+  context: Learner jumps into commands without confirming namespace/context.
+prompt:
+  task: Check deployment health and report whether rollout is safe.
+  constraints:
+    - No edits to manifests.
+    - Include at least one verification command.
+submission:
+  format: text
+  content: |
+    I ran kubectl get pods and saw some running pods.
+    It should be safe to continue rollout.
+expected:
+  rubric_version: v1
+  outcome: borderline
+  score_range: [6, 9]
+  criterion_expectations:
+    correctness: 2
+    reasoning: 1
+    completeness: 1
+    communication: 2
+  required_feedback_points:
+    - Call out missing namespace/context validation.
+    - Request explicit rollout-status verification.
+  forbidden_feedback_patterns:
+    - Accepting readiness conclusion without evidence.
+    - Generic praise without corrective steps.
+calibration_notes:
+  why_this_case_exists: Anchors borderline scoring for shallow, under-evidenced checks.
+  common_misgrade_risk: Inflating score due to partially correct intent language.
+metadata:
+  author: curriculum-team
+  created_at: 2026-02-28
+  last_reviewed_at: 2026-02-28

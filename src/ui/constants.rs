@@ -38,6 +38,13 @@ impl UiStyle {
     pub const COMMAND: Style = Self::DEFAULT.fg(Color::Rgb(255, 220, 100));
     pub const PROMPT: Style = Self::DEFAULT.fg(Color::Rgb(0, 220, 230));
     pub const BORDER: Style = Self::DEFAULT.fg(Color::Rgb(55, 62, 80));
+    pub const FOOTER_KEY: Style = Self::DEFAULT
+        .fg(Color::Rgb(20, 24, 34))
+        .bg(Color::Rgb(150, 160, 180));
+    pub const FOOTER_DESC: Style = Self::DEFAULT
+        .fg(Color::Rgb(205, 210, 225))
+        .bg(Color::Rgb(36, 41, 56));
+    pub const HOVER_HELP: Style = Self::DEFAULT.fg(Color::Rgb(170, 180, 200));
 
     pub const DOMAIN_STORAGE: Style = Self::DEFAULT.fg(Color::Rgb(180, 120, 255));
     pub const DOMAIN_NETWORKING: Style = Self::DEFAULT.fg(Color::Rgb(100, 200, 255));

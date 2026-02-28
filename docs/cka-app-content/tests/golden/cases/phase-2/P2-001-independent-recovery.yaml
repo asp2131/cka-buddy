@@ -1,0 +1,48 @@
+id: P2-001-independent-recovery
+phase: 2
+title: Independent ingress recovery with full validation
+status: active
+tags:
+  - ingress
+  - tls
+  - recovery
+learner_profile:
+  level: advanced
+  context: Learner independently restores broken HTTPS routing in production-like scenario.
+prompt:
+  task: Restore HTTPS access for app.example.internal and prove end-to-end recovery.
+  constraints:
+    - Minimize blast radius.
+    - Include rollback note.
+    - Provide final validation evidence.
+submission:
+  format: markdown
+  content: |
+    - Checked ingress rules and backend service targets.
+    - Verified TLS secret name mismatch in ingress spec.
+    - Patched ingress to use existing `app-tls` secret.
+    - Validated: `kubectl describe ingress app -n edge` shows correct cert.
+    - Validated service path with in-cluster curl and external host header test.
+    - Rollback: revert ingress annotation/secret reference from previous yaml export.
+expected:
+  rubric_version: v1
+  outcome: pass
+  score_range: [13, 16]
+  criterion_expectations:
+    correctness: 4
+    reasoning: 3
+    completeness: 4
+    communication: 3
+  required_feedback_points:
+    - Credit root-cause isolation to TLS secret mismatch.
+    - Credit layered validation (resource + request path).
+  forbidden_feedback_patterns:
+    - Requiring unnecessary redeploy when patch is sufficient.
+    - Ignoring rollback quality.
+calibration_notes:
+  why_this_case_exists: Defines high-quality phase-2 pass with independent synthesis.
+  common_misgrade_risk: Penalizing for concise command detail despite complete strategy.
+metadata:
+  author: curriculum-team
+  created_at: 2026-02-28
+  last_reviewed_at: 2026-02-28

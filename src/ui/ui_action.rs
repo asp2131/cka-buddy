@@ -16,6 +16,7 @@ pub enum UiAction {
     ShowShellMode,
     SetShellMode(String),
     DismissPopup,
+    SetCommandInput(String),
     RunCommand(String),
     ForceRunCommand(String),
 }

@@ -1,10 +1,13 @@
 pub mod big_numbers;
 pub mod button;
+pub mod callback_registry;
 pub mod constants;
+pub mod clickable_list;
 pub mod learning_screen;
 pub mod popup;
 pub mod splash_screen;
 pub mod traits;
 pub mod ui_action;
+pub mod ui_frame;
 pub mod ui_screen;
 pub mod widgets;

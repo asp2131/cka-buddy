@@ -6,7 +6,9 @@ use std::path::Path;
 use std::time::Duration;
 
 use anyhow::Result;
-use crossterm::event::{self, Event, KeyEventKind};
+use crossterm::event::{
+    self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind, MouseEventKind,
+};
 use crossterm::execute;
 use crossterm::terminal::{
     EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
@@ -86,6 +88,8 @@ fn run_loop(
     coach: &(dyn crate::coach::CoachAdvisor + Send + Sync),
     ui: &mut UiScreen,
 ) -> Result<()> {
+    let mut mouse_position: Option<(u16, u16)> = None;
+
     loop {
         if ui.state == ScreenState::Learning {
             ui.learning.output_log.extend(shell.drain_output());
@@ -95,22 +99,35 @@ fn run_loop(
         ui.update(engine)?;
 
         terminal.draw(|frame| {
-            let _ = ui.render(frame, engine);
+            let _ = ui.render(frame, engine, mouse_position);
         })?;
 
         if !event::poll(Duration::from_millis(100))? {
             continue;
         }
 
-        let Event::Key(key) = event::read()? else {
-            continue;
+        let event = event::read()?;
+
+        let action = match event {
+            Event::Mouse(mouse) => {
+                mouse_position = Some((mouse.column, mouse.row));
+                match mouse.kind {
+                    MouseEventKind::Moved => None,
+                    _ => ui.callback_registry().resolve_mouse_event(
+                        mouse.kind,
+                        mouse.column,
+                        mouse.row,
+                    ),
+                }
+            }
+            Event::Key(key) if key.kind == KeyEventKind::Press => ui
+                .callback_registry()
+                .resolve_key_event(key.code)
+                .or_else(|| ui.handle_key_events(key, engine)),
+            _ => None,
         };
 
-        if key.kind != KeyEventKind::Press {
-            continue;
-        }
-
-        let Some(action) = ui.handle_key_events(key, engine) else {
+        let Some(action) = action else {
             continue;
         };
 
@@ -297,6 +314,10 @@ fn run_loop(
             UiAction::DismissPopup => {
                 ui.dismiss_popup();
             }
+            UiAction::SetCommandInput(cmd) => {
+                ui.learning.command_input = cmd;
+                ui.learning.status = "Command loaded. Press Enter to run.".to_string();
+            }
             UiAction::RunCommand(raw_cmd) => {
                 engine.record_attempt();
                 match evaluate_command(&raw_cmd) {
@@ -442,7 +463,7 @@ fn trim_output(output_log: &mut Vec<String>, max: usize) {
 fn setup_terminal() -> Result<Terminal<CrosstermBackend<Stdout>>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
@@ -451,7 +472,7 @@ fn setup_terminal() -> Result<Terminal<CrosstermBackend<Stdout>>> {
 
 fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
     let _ = disable_raw_mode();
-    let _ = execute!(terminal.backend_mut(), LeaveAlternateScreen);
+    let _ = execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture);
     let _ = terminal.show_cursor();
     Ok(())
 }

@@ -46,7 +46,7 @@ success_contains:
   - kind
 what_changed:
   - kind CLI available in PATH
-fallback_hint: Windows (PowerShell): winget install Kubernetes.kind. If your architecture is not amd64, download the correct kind binary from the official releases page and place it in your PATH.
+fallback_hint: 'Windows (PowerShell): winget install Kubernetes.kind. If your architecture is not amd64, download the correct kind binary from the official releases page and place it in your PATH.'
 ```
 
 ```cka-step
@@ -64,7 +64,7 @@ success_contains:
   - Client Version
 what_changed:
   - kubectl CLI available in PATH
-fallback_hint: Windows (PowerShell): winget install -e --id Kubernetes.kubectl. If your architecture is not amd64, use the matching kubectl binary for your OS/CPU from dl.k8s.io and move it into your PATH.
+fallback_hint: 'Windows (PowerShell): winget install -e --id Kubernetes.kubectl. If your architecture is not amd64, use the matching kubectl binary for your OS/CPU from dl.k8s.io and move it into your PATH.'
 ```
 
 ```cka-step

@@ -1,0 +1,48 @@
+id: P0-001-baseline-readiness
+phase: 0
+title: Baseline namespace and pod readiness checks
+status: active
+tags:
+  - baseline
+  - kubectl-get
+  - readiness
+learner_profile:
+  level: novice
+  context: First week of CKA prep, learning safe cluster inspection flow.
+prompt:
+  task: Verify whether app pods are healthy in the target namespace and summarize next action.
+  constraints:
+    - Do not modify workloads.
+    - Use only read-only kubectl commands.
+    - Keep response under 10 lines.
+submission:
+  format: command-log
+  content: |
+    kubectl config current-context
+    kubectl get ns
+    kubectl get pods -n shop
+    kubectl describe pod web-7d8f9 -n shop
+    kubectl get events -n shop --sort-by=.metadata.creationTimestamp | tail -n 5
+    Summary: One pod is Pending due to image pull; notify and verify image secret.
+expected:
+  rubric_version: v1
+  outcome: pass
+  score_range: [12, 16]
+  criterion_expectations:
+    correctness: 4
+    reasoning: 3
+    completeness: 3
+    communication: 3
+  required_feedback_points:
+    - Acknowledge correct read-only triage sequence.
+    - Suggest one concrete follow-up validation command.
+  forbidden_feedback_patterns:
+    - Claiming issue is fixed without any mutation command.
+    - Penalizing for not restarting pods despite read-only constraint.
+calibration_notes:
+  why_this_case_exists: Establishes baseline pass behavior for novice-safe inspection.
+  common_misgrade_risk: Over-penalizing brevity even when required checks are present.
+metadata:
+  author: curriculum-team
+  created_at: 2026-02-28
+  last_reviewed_at: 2026-02-28

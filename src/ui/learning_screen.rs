@@ -1,5 +1,5 @@
+use crossterm::event::KeyCode;
 use ratatui::{
-    Frame,
     layout::{Constraint, Layout, Rect},
     style::Modifier,
     text::{Line, Span, Text},
@@ -11,8 +11,11 @@ use crate::app::state::CompletionCard;
 use crate::content::command_info::command_blurb;
 
 use super::{
+    button::Button,
+    clickable_list::ClickableList,
     constants::UiStyle,
     traits::Screen,
+    ui_frame::UiFrame,
     ui_action::UiAction,
     widgets::{
         default_block, difficulty_badge, domain_tag, ellipsize, footer_help_text, mode_badge,
@@ -49,10 +52,11 @@ impl Screen for LearningScreen {
         Ok(())
     }
 
-    fn render(&mut self, frame: &mut Frame, engine: &Engine, area: Rect) -> anyhow::Result<()> {
+    fn render(&mut self, frame: &mut UiFrame<'_, '_>, engine: &Engine, area: Rect) -> anyhow::Result<()> {
         let zones = Layout::vertical([
             Constraint::Length(3),
             Constraint::Min(0),
+            Constraint::Length(3),
             Constraint::Length(4),
         ])
         .split(area);
@@ -92,7 +96,8 @@ impl Screen for LearningScreen {
             );
         }
 
-        render_command_bar(frame, zones[2], &self.command_input, &self.status);
+        render_action_row(frame, zones[2], self.command_input.is_empty());
+        render_command_bar(frame, zones[3], &self.command_input, &self.status);
         Ok(())
     }
 
@@ -161,9 +166,18 @@ impl Screen for LearningScreen {
     fn footer_help(&self) -> String {
         footer_help_text(&self.command_input)
     }
+
+    fn footer_spans(&self) -> Vec<(String, String)> {
+        vec![
+            ("V".to_string(), "Verify".to_string()),
+            ("H".to_string(), "Hint".to_string()),
+            ("Enter".to_string(), "Run".to_string()),
+            ("/help".to_string(), "Commands".to_string()),
+        ]
+    }
 }
 
-fn render_header(frame: &mut Frame, area: Rect, engine: &Engine) {
+fn render_header(frame: &mut UiFrame<'_, '_>, area: Rect, engine: &Engine) {
     let step = engine.current_step();
     let block = default_block();
     let inner = block.inner(area);
@@ -208,7 +222,7 @@ fn render_header(frame: &mut Frame, area: Rect, engine: &Engine) {
 }
 
 fn render_main_feed(
-    frame: &mut Frame,
+    frame: &mut UiFrame<'_, '_>,
     area: Rect,
     engine: &Engine,
     _status: &str,
@@ -229,7 +243,7 @@ fn render_main_feed(
     render_terminal_feed(frame, chunks[1], output_log, hint_message, completion_card);
 }
 
-fn render_step_panel(frame: &mut Frame, area: Rect, engine: &Engine) {
+fn render_step_panel(frame: &mut UiFrame<'_, '_>, area: Rect, engine: &Engine) {
     let step = engine.current_step();
     let block = titled_block("Step");
     let inner = block.inner(area);
@@ -260,6 +274,7 @@ fn render_step_panel(frame: &mut Frame, area: Rect, engine: &Engine) {
             "  (no suggested commands — use objective + docs)",
             UiStyle::MUTED,
         )));
+        frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
     } else {
         lines.push(Line::from(Span::styled("  Runbook:", UiStyle::MUTED)));
         for (idx, cmd) in step.run_commands.iter().take(5).enumerate() {
@@ -268,18 +283,35 @@ fn render_step_panel(frame: &mut Frame, area: Rect, engine: &Engine) {
                 Span::styled(format!("  [{:>1}] ", idx + 1), UiStyle::MUTED),
                 Span::styled(blurb, UiStyle::TEXT_PRIMARY),
             ]));
-            lines.push(Line::from(vec![
-                Span::raw("      "),
-                Span::styled(cmd.clone(), UiStyle::COMMAND),
-            ]));
+        }
+
+        frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
+
+        let list_top = inner.y.saturating_add(4);
+        let available_rows = inner.bottom().saturating_sub(list_top);
+        let rows = step.run_commands.len().min(5).min(available_rows as usize);
+        if rows > 0 {
+            let list_area = Rect::new(inner.x, list_top, inner.width, rows as u16);
+            let items = step
+                .run_commands
+                .iter()
+                .take(rows)
+                .map(|cmd| cmd.clone())
+                .collect::<Vec<_>>();
+            let actions = items
+                .iter()
+                .map(|cmd| UiAction::SetCommandInput(cmd.clone()))
+                .collect::<Vec<_>>();
+            let list = ClickableList::new(items, actions)
+                .style(UiStyle::COMMAND)
+                .marker("      ");
+            frame.render_interactive_widget(list, list_area);
         }
     }
-
-    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
 }
 
 fn render_terminal_feed(
-    frame: &mut Frame,
+    frame: &mut UiFrame<'_, '_>,
     area: Rect,
     output_log: &[String],
     hint_message: Option<&str>,
@@ -366,7 +398,7 @@ fn status_badge(status: &str) -> (&'static str, ratatui::style::Style) {
 }
 
 fn render_activity_rail(
-    frame: &mut Frame,
+    frame: &mut UiFrame<'_, '_>,
     area: Rect,
     run_commands: &[String],
     hint_message: Option<&str>,
@@ -431,7 +463,29 @@ fn render_activity_rail(
     frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
 }
 
-fn render_command_bar(frame: &mut Frame, area: Rect, command_input: &str, status: &str) {
+fn render_action_row(frame: &mut UiFrame<'_, '_>, area: Rect, enable_hotkeys: bool) {
+    if area.height < 3 {
+        return;
+    }
+
+    let rows = Layout::horizontal([Constraint::Length(14), Constraint::Length(12), Constraint::Min(0)])
+        .split(area);
+
+    let verify = {
+        let b = Button::new("Verify").on_click(UiAction::Verify).hover_text(Text::from("Run verification checks"));
+        if enable_hotkeys { b.hotkey(KeyCode::Char('v')) } else { b }
+    };
+
+    let hint = {
+        let b = Button::new("Hint").on_click(UiAction::Hint).hover_text(Text::from("Get a contextual hint"));
+        if enable_hotkeys { b.hotkey(KeyCode::Char('h')) } else { b }
+    };
+
+    frame.render_interactive_widget(verify, rows[0]);
+    frame.render_interactive_widget(hint, rows[1]);
+}
+
+fn render_command_bar(frame: &mut UiFrame<'_, '_>, area: Rect, command_input: &str, status: &str) {
     if area.height == 0 {
         return;
     }

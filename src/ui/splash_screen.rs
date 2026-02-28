@@ -2,7 +2,6 @@ use std::time::{Duration, Instant};
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    Frame,
     layout::{Constraint, Flex, Layout, Rect},
     text::{Line, Span},
     widgets::{Block, Paragraph, Wrap},
@@ -10,7 +9,9 @@ use ratatui::{
 
 use crate::app::engine::Engine;
 
-use super::{button::Button, constants::UiStyle, traits::Screen, ui_action::UiAction};
+use super::{
+    button::Button, constants::UiStyle, traits::Screen, ui_action::UiAction, ui_frame::UiFrame,
+};
 
 const TITLE: [&str; 6] = [
     " ██████╗██╗  ██╗ █████╗     ██████╗ ██╗   ██╗██████╗ ██████╗ ██╗   ██╗",
@@ -93,7 +94,7 @@ impl Screen for SplashScreen {
         Ok(())
     }
 
-    fn render(&mut self, frame: &mut Frame, engine: &Engine, area: Rect) -> anyhow::Result<()> {
+    fn render(&mut self, frame: &mut UiFrame<'_, '_>, engine: &Engine, area: Rect) -> anyhow::Result<()> {
         let chunks = Layout::vertical([
             Constraint::Length(1),
             Constraint::Length(TITLE.len() as u16 + 2),

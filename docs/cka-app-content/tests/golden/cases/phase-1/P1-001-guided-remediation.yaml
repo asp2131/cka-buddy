@@ -1,0 +1,48 @@
+id: P1-001-guided-remediation
+phase: 1
+title: Guided service endpoint remediation plan
+status: active
+tags:
+  - service
+  - endpoints
+  - guided
+learner_profile:
+  level: intermediate
+  context: Learner follows hint-driven workflow to diagnose traffic failure.
+prompt:
+  task: Diagnose why Service has no endpoints and provide a safe remediation sequence.
+  constraints:
+    - Explain each step briefly.
+    - Include a post-fix verification path.
+    - Avoid deleting resources.
+submission:
+  format: markdown
+  content: |
+    1. `kubectl get svc api -n payments -o wide`
+    2. `kubectl get ep api -n payments`
+    3. `kubectl get pods -n payments --show-labels`
+    4. Compare pod labels to service selector.
+    5. Patch service selector to match live pods.
+    6. Verify with `kubectl get ep api -n payments` and a test curl from debug pod.
+expected:
+  rubric_version: v1
+  outcome: pass
+  score_range: [11, 15]
+  criterion_expectations:
+    correctness: 3
+    reasoning: 3
+    completeness: 3
+    communication: 3
+  required_feedback_points:
+    - Confirm diagnosis path from svc to endpoints to labels.
+    - Reinforce post-fix verification via endpoint + request test.
+  forbidden_feedback_patterns:
+    - Suggesting pod restarts before selector check.
+    - Ignoring constraint against deletion.
+calibration_notes:
+  why_this_case_exists: Represents solid guided reasoning with safe mutation and verification.
+  common_misgrade_risk: Undervaluing due to lack of exact patch syntax.
+metadata:
+  author: curriculum-team
+  created_at: 2026-02-28
+  last_reviewed_at: 2026-02-28

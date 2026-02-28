@@ -2,15 +2,23 @@ use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     Frame,
+    layout::{Constraint, Layout, Rect},
     style::{Color, Style},
-    widgets::Clear,
+    text::{Line, Span},
+    widgets::{Clear, Paragraph},
 };
 
 use crate::app::engine::Engine;
 
 use super::{
-    constants::centered_clamped_viewport, learning_screen::LearningScreen, popup::PopupMessage,
-    splash_screen::SplashScreen, traits::Screen, ui_action::UiAction,
+    callback_registry::CallbackRegistry,
+    constants::{UiStyle, centered_clamped_viewport},
+    learning_screen::LearningScreen,
+    popup::PopupMessage,
+    splash_screen::SplashScreen,
+    traits::Screen,
+    ui_action::UiAction,
+    ui_frame::UiFrame,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,6 +32,7 @@ pub struct UiScreen {
     pub splash: SplashScreen,
     pub learning: LearningScreen,
     pub popup_stack: Vec<PopupMessage>,
+    callback_registry: CallbackRegistry,
 }
 
 impl UiScreen {
@@ -33,6 +42,7 @@ impl UiScreen {
             splash: SplashScreen::new(has_progress),
             learning: LearningScreen::new(initial_status),
             popup_stack: Vec::new(),
+            callback_registry: CallbackRegistry::default(),
         }
     }
 
@@ -60,28 +70,55 @@ impl UiScreen {
         Ok(())
     }
 
-    pub fn render(&mut self, frame: &mut Frame, engine: &Engine) -> Result<()> {
+    pub fn render(
+        &mut self,
+        frame: &mut Frame,
+        engine: &Engine,
+        mouse_position: Option<(u16, u16)>,
+    ) -> Result<()> {
         let area = centered_clamped_viewport(frame.area());
+
+        let (body_area, footer_area, hover_area) = split_shell(area);
+
+        let mut ui_frame = UiFrame::new(frame, hover_area.unwrap_or(Rect::new(0, 0, 0, 0)), mouse_position);
+        ui_frame.set_active_layer(if self.has_popup() { 1 } else { 0 });
+
         match self.state {
-            ScreenState::Splash => self.splash.render(frame, engine, area)?,
-            ScreenState::Learning => self.learning.render(frame, engine, area)?,
+            ScreenState::Splash => self.splash.render(&mut ui_frame, engine, body_area)?,
+            ScreenState::Learning => self.learning.render(&mut ui_frame, engine, body_area)?,
         }
 
-        if let Some(popup) = self.popup_stack.last() {
-            frame.render_widget(Clear, area);
-            frame.render_widget(
+        if self.popup_stack.last().is_some() {
+            ui_frame.render_widget(Clear, body_area);
+            ui_frame.render_widget(
                 ratatui::widgets::Block::default()
                     .style(Style::default().bg(Color::Rgb(14, 18, 28))),
-                area,
+                body_area,
             );
             match self.state {
-                ScreenState::Splash => self.splash.render(frame, engine, area)?,
-                ScreenState::Learning => self.learning.render(frame, engine, area)?,
+                ScreenState::Splash => self.splash.render(&mut ui_frame, engine, body_area)?,
+                ScreenState::Learning => self.learning.render(&mut ui_frame, engine, body_area)?,
             }
-            popup.render(frame, area);
         }
 
+        if let Some(footer) = footer_area {
+            render_footer(&mut ui_frame, footer, self.active_footer_spans());
+        }
+
+        if let Some(hover) = hover_area {
+            render_hover_help(&mut ui_frame, hover);
+        }
+
+        self.callback_registry = ui_frame.into_registry();
+
+        if let Some(popup) = self.popup_stack.last() {
+            popup.render(frame, area);
+        }
         Ok(())
+    }
+
+    pub fn callback_registry(&self) -> &CallbackRegistry {
+        &self.callback_registry
     }
 
     pub fn handle_key_events(&mut self, key: KeyEvent, engine: &Engine) -> Option<UiAction> {
@@ -99,6 +136,52 @@ impl UiScreen {
             ScreenState::Learning => self.learning.handle_key_events(key, engine),
         }
     }
+}
+
+fn split_shell(area: Rect) -> (Rect, Option<Rect>, Option<Rect>) {
+    if area.height < 4 {
+        return (area, None, None);
+    }
+
+    if area.height < 6 {
+        let chunks = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
+        return (chunks[0], Some(chunks[1]), None);
+    }
+
+    let chunks = Layout::vertical([
+        Constraint::Min(0),
+        Constraint::Length(1),
+        Constraint::Length(1),
+    ])
+    .split(area);
+    (chunks[0], Some(chunks[1]), Some(chunks[2]))
+}
+
+fn render_footer(frame: &mut UiFrame<'_, '_>, area: Rect, spans: Vec<(String, String)>) {
+    if area.width == 0 || area.height == 0 {
+        return;
+    }
+
+    let mut cells: Vec<Span<'static>> = Vec::new();
+    for (key, desc) in spans {
+        cells.push(Span::styled(format!(" {key} "), UiStyle::FOOTER_KEY));
+        cells.push(Span::styled(format!(" {desc} "), UiStyle::FOOTER_DESC));
+        cells.push(Span::raw(" "));
+    }
+
+    frame.render_widget(Paragraph::new(Line::from(cells)), area);
+}
+
+fn render_hover_help(frame: &mut UiFrame<'_, '_>, area: Rect) {
+    if area.width == 0 || area.height == 0 {
+        return;
+    }
+
+    let text = frame
+        .hover_text()
+        .cloned()
+        .unwrap_or_else(|| "Type commands or click actions".into());
+    frame.render_widget(Paragraph::new(text).style(UiStyle::HOVER_HELP), area);
 }
 
 fn handle_popup_key(key: KeyEvent, popup: &mut PopupMessage) -> Option<UiAction> {

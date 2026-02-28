@@ -1,0 +1,43 @@
+id: P1-002-partial-diagnosis
+phase: 1
+title: Misdiagnosed crash loop with unsafe recommendation
+status: active
+tags:
+  - crashloop
+  - misdiagnosis
+  - safety
+learner_profile:
+  level: intermediate
+  context: Learner sees restart spikes and proposes immediate node drain.
+prompt:
+  task: Diagnose repeated pod restarts and recommend the next operator action.
+  constraints:
+    - Prioritize least-disruptive steps first.
+    - Use observable evidence.
+submission:
+  format: text
+  content: |
+    Pods are restarting so the node is probably bad.
+    I would cordon and drain the node immediately to fix it.
+expected:
+  rubric_version: v1
+  outcome: fail
+  score_range: [3, 6]
+  criterion_expectations:
+    correctness: 1
+    reasoning: 1
+    completeness: 0
+    communication: 2
+  required_feedback_points:
+    - Flag unsafe escalation without pod-level diagnostics.
+    - Require logs/describe/events evidence before node actions.
+  forbidden_feedback_patterns:
+    - Endorsing immediate node drain as first action.
+    - Treating hypothesis as confirmed root cause.
+calibration_notes:
+  why_this_case_exists: Captures dangerous but plausible operator advice.
+  common_misgrade_risk: Over-crediting confident tone and brevity.
+metadata:
+  author: curriculum-team
+  created_at: 2026-02-28
+  last_reviewed_at: 2026-02-28

@@ -173,7 +173,7 @@ what_changed:
   - Taint removed (trailing minus sign removes a taint)
   - Test pod cleaned up, app pods unaffected
   - Verified maintenance taint is no longer present on nodes
-fallback_hint: If taints are still present, rerun the remove command exactly with the trailing minus: maintenance=true:NoSchedule-
+fallback_hint: 'If taints are still present, rerun the remove command exactly with the trailing minus: maintenance=true:NoSchedule-'
 ```
 
 ```cka-step
