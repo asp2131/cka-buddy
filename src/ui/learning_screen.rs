@@ -8,13 +8,13 @@ use ratatui::{
 
 use crate::app::engine::Engine;
 use crate::app::state::CompletionCard;
-use crate::content::command_info::command_blurb;
+use crate::content::models::Step;
 
 use super::{
     button::Button,
     clickable_list::ClickableList,
-    cluster_view::ClusterView,
     constants::UiStyle,
+    tamagotchi::KubeChanAssistant,
     traits::Screen,
     ui_frame::UiFrame,
     ui_action::UiAction,
@@ -33,6 +33,8 @@ pub struct LearningScreen {
     pub hint_message: Option<String>,
     pub completion_card: Option<CompletionCard>,
     pub tab_index: usize,
+    pub tick: usize,
+    pub pairing_command: Option<String>,
 }
 
 impl LearningScreen {
@@ -44,61 +46,86 @@ impl LearningScreen {
             hint_message: None,
             completion_card: None,
             tab_index: 0,
+            tick: 0,
+            pairing_command: None,
         }
     }
 }
 
 impl Screen for LearningScreen {
     fn update(&mut self, _engine: &Engine) -> anyhow::Result<()> {
+        self.tick = self.tick.wrapping_add(1);
         Ok(())
     }
 
     fn render(&mut self, frame: &mut UiFrame<'_, '_>, engine: &Engine, area: Rect) -> anyhow::Result<()> {
+        let pairing_height = if self.pairing_command.is_some() { 2u16 } else { 0 };
+
         let zones = Layout::vertical([
             Constraint::Length(3),
+            Constraint::Length(pairing_height),
             Constraint::Min(0),
-            Constraint::Length(3),
-            Constraint::Length(4),
+            Constraint::Length(2),
         ])
         .split(area);
 
         render_header(frame, zones[0], engine);
 
-        if zones[1].width >= WIDE_TERMINAL_THRESHOLD {
-            let split =
-                Layout::horizontal([Constraint::Percentage(70), Constraint::Percentage(30)])
-                    .split(zones[1]);
-            render_main_feed(
+        if let Some(cmd) = &self.pairing_command {
+            render_pairing_banner(frame, zones[1], cmd);
+        }
+
+        let content_area = zones[2];
+
+        if content_area.width >= WIDE_TERMINAL_THRESHOLD {
+            let split = Layout::horizontal([
+                Constraint::Percentage(65),
+                Constraint::Percentage(35),
+            ])
+            .split(content_area);
+
+            let left = Layout::vertical([
+                Constraint::Length(4),
+                Constraint::Min(4),
+            ])
+            .split(split[0]);
+
+            render_step_panel(frame, left[0], engine);
+            render_terminal_feed(
                 frame,
-                split[0],
-                engine,
-                &self.status,
+                left[1],
                 &self.output_log,
                 self.hint_message.as_deref(),
                 self.completion_card.as_ref(),
             );
-            render_activity_rail(
+
+            render_assistant_panel(
                 frame,
                 split[1],
-                engine.current_step().run_commands.as_slice(),
+                engine.current_step(),
                 self.hint_message.as_deref(),
                 self.completion_card.as_ref(),
-                &self.status,
+                engine.readiness,
+                self.tick,
             );
         } else {
-            render_main_feed(
+            let narrow = Layout::vertical([
+                Constraint::Length(4),
+                Constraint::Min(4),
+            ])
+            .split(content_area);
+
+            render_step_panel(frame, narrow[0], engine);
+            render_terminal_feed(
                 frame,
-                zones[1],
-                engine,
-                &self.status,
+                narrow[1],
                 &self.output_log,
                 self.hint_message.as_deref(),
                 self.completion_card.as_ref(),
             );
         }
 
-        render_action_row(frame, zones[2], self.command_input.is_empty());
-        render_command_bar(frame, zones[3], &self.command_input, &self.status);
+        render_prompt_bar(frame, zones[3], &self.command_input, &self.status, self.command_input.is_empty());
         Ok(())
     }
 
@@ -222,90 +249,68 @@ fn render_header(frame: &mut UiFrame<'_, '_>, area: Rect, engine: &Engine) {
     frame.render_widget(Paragraph::new(header), inner);
 }
 
-fn render_main_feed(
-    frame: &mut UiFrame<'_, '_>,
-    area: Rect,
-    engine: &Engine,
-    _status: &str,
-    output_log: &[String],
-    hint_message: Option<&str>,
-    completion_card: Option<&CompletionCard>,
-) {
-    let step = engine.current_step();
-    let command_count = step.run_commands.len().min(5) as u16;
-    // Each command now takes 2 lines (blurb + command), so double the count
-    let step_panel_height =
-        (6 + command_count * 2).clamp(6, area.height.saturating_sub(8).max(6));
-
-    let chunks =
-        Layout::vertical([Constraint::Length(step_panel_height), Constraint::Min(4)]).split(area);
-
-    render_step_panel(frame, chunks[0], engine);
-    render_terminal_feed(frame, chunks[1], output_log, hint_message, completion_card);
+fn render_pairing_banner(frame: &mut UiFrame<'_, '_>, area: Rect, cmd: &str) {
+    if area.height == 0 {
+        return;
+    }
+    let lines = vec![
+        Line::from(vec![
+            Span::styled(" ⚡ PAIR ", UiStyle::PAIRING_CMD.add_modifier(Modifier::BOLD)),
+            Span::styled(format!(" {cmd} "), UiStyle::COMMAND),
+        ]),
+        Line::from(Span::styled(
+            "   Run the above command in another terminal to connect",
+            UiStyle::MUTED,
+        )),
+    ];
+    frame.render_widget(Paragraph::new(lines), area);
 }
 
 fn render_step_panel(frame: &mut UiFrame<'_, '_>, area: Rect, engine: &Engine) {
     let step = engine.current_step();
-    let block = titled_block("Step");
+    let block = Block::bordered()
+        .border_style(UiStyle::ACCENT_BORDER)
+        .title(Span::styled(" Objective ", UiStyle::HEADER));
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    let mut lines = vec![
+    let lines = vec![
         Line::from(vec![
-            Span::styled("  Objective: ", UiStyle::MUTED),
+            Span::styled(" ☸ ", UiStyle::HIGHLIGHT),
             Span::styled(
-                step.objective.clone(),
+                ellipsize(&step.objective, inner.width.saturating_sub(6) as usize),
                 UiStyle::TEXT_PRIMARY.add_modifier(Modifier::BOLD),
             ),
         ]),
-        Line::from(vec![Span::styled(
-            format!(
-                "  {} min  |  {}  |  {}",
-                step.timebox_min,
-                step.difficulty,
-                step.domains.join(", ")
+        Line::from(vec![
+            Span::styled(
+                format!(
+                    "   {} min │ {} │ {}",
+                    step.timebox_min,
+                    step.difficulty,
+                    step.domains.join(", ")
+                ),
+                UiStyle::MUTED,
             ),
-            UiStyle::MUTED,
-        )]),
-        Line::from(""),
+        ]),
     ];
 
-    if step.run_commands.is_empty() {
-        lines.push(Line::from(Span::styled(
-            "  (no suggested commands — use objective + docs)",
-            UiStyle::MUTED,
-        )));
-        frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
-    } else {
-        lines.push(Line::from(Span::styled("  Runbook:", UiStyle::MUTED)));
-        for (idx, cmd) in step.run_commands.iter().take(5).enumerate() {
-            let blurb = command_blurb(cmd);
-            lines.push(Line::from(vec![
-                Span::styled(format!("  [{:>1}] ", idx + 1), UiStyle::MUTED),
-                Span::styled(blurb, UiStyle::TEXT_PRIMARY),
-            ]));
-        }
+    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
 
-        frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
-
-        let list_top = inner.y.saturating_add(4);
-        let available_rows = inner.bottom().saturating_sub(list_top);
-        let rows = step.run_commands.len().min(5).min(available_rows as usize);
+    if !step.run_commands.is_empty() {
+        let list_y = inner.y.saturating_add(2);
+        let available = inner.bottom().saturating_sub(list_y);
+        let rows = step.run_commands.len().min(5).min(available as usize);
         if rows > 0 {
-            let list_area = Rect::new(inner.x, list_top, inner.width, rows as u16);
-            let items = step
-                .run_commands
-                .iter()
-                .take(rows)
-                .map(|cmd| cmd.clone())
-                .collect::<Vec<_>>();
-            let actions = items
+            let list_area = Rect::new(inner.x, list_y, inner.width, rows as u16);
+            let items: Vec<_> = step.run_commands.iter().take(rows).cloned().collect();
+            let actions: Vec<_> = items
                 .iter()
                 .map(|cmd| UiAction::SetCommandInput(cmd.clone()))
-                .collect::<Vec<_>>();
+                .collect();
             let list = ClickableList::new(items, actions)
                 .style(UiStyle::COMMAND)
-                .marker("      ");
+                .marker("   ");
             frame.render_interactive_widget(list, list_area);
         }
     }
@@ -372,168 +377,99 @@ fn render_terminal_feed(
     );
 }
 
-fn status_badge(status: &str) -> (&'static str, ratatui::style::Style) {
-    let normalized = status.trim();
-    let lower = normalized.to_ascii_lowercase();
-
-    let (label, style) = if lower.starts_with("error")
-        || lower.starts_with("fail")
-        || lower.contains("failed")
-        || lower.contains("error")
-    {
-        ("ERROR", UiStyle::ERROR)
-    } else if lower.starts_with("warn") || lower.contains("warning") {
-        ("WARN", UiStyle::WARNING)
-    } else if lower.starts_with("ok")
-        || lower.starts_with("done")
-        || lower.starts_with("success")
-        || lower.contains("complete")
-        || lower.contains("ready")
-    {
-        ("SUCCESS", UiStyle::OK)
-    } else {
-        ("INFO", UiStyle::HIGHLIGHT)
-    };
-
-    (label, style.add_modifier(Modifier::BOLD))
-}
-
-fn render_activity_rail(
+fn render_assistant_panel(
     frame: &mut UiFrame<'_, '_>,
     area: Rect,
-    run_commands: &[String],
+    step: &Step,
     hint_message: Option<&str>,
     completion_card: Option<&CompletionCard>,
-    status: &str,
+    readiness: u8,
+    tick: usize,
 ) {
-    let block = titled_block("Activity");
+    let block = Block::bordered()
+        .border_style(UiStyle::ACCENT_BORDER)
+        .title(Span::styled(" ☸ Kube-chan ", UiStyle::HEADER));
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    let sections = Layout::vertical([Constraint::Min(6), Constraint::Length(6)]).split(inner);
-
-    let cluster = ClusterView::new("CLUSTER", "k8s", run_commands, run_commands.len());
-    frame.render_widget(cluster, sections[0]);
-
-    let (status_label, status_style) = status_badge(status);
-    let mut lines = vec![Line::from(vec![
-        Span::styled("  Status ", UiStyle::MUTED),
-        Span::styled(format!("[{status_label}]"), status_style),
-    ])];
-
-    if let Some(hint) = hint_message {
-        lines.push(Line::from(Span::styled(format!("  {hint}"), UiStyle::WARNING)));
-    }
-
-    if let Some(card) = completion_card {
-        lines.push(Line::from(Span::styled(format!("  {}", card.done), UiStyle::OK)));
-    }
-
-    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), sections[1]);
+    let has_completion = completion_card.is_some();
+    let assistant = KubeChanAssistant::new(
+        readiness,
+        tick,
+        &step.objective,
+        &step.domains,
+        &step.difficulty,
+        step.fallback_hint.as_deref(),
+        &step.run_commands,
+        hint_message,
+        has_completion,
+    );
+    frame.render_widget(assistant, inner);
 }
 
-fn render_action_row(frame: &mut UiFrame<'_, '_>, area: Rect, enable_hotkeys: bool) {
-    if area.height < 3 {
-        return;
-    }
-
-    let rows = Layout::horizontal([Constraint::Length(14), Constraint::Length(12), Constraint::Min(0)])
-        .split(area);
-
-    let verify = {
-        let b = Button::new("Verify").on_click(UiAction::Verify).hover_text(Text::from("Run verification checks"));
-        if enable_hotkeys { b.hotkey(KeyCode::Char('v')) } else { b }
-    };
-
-    let hint = {
-        let b = Button::new("Hint").on_click(UiAction::Hint).hover_text(Text::from("Get a contextual hint"));
-        if enable_hotkeys { b.hotkey(KeyCode::Char('h')) } else { b }
-    };
-
-    frame.render_interactive_widget(verify, rows[0]);
-    frame.render_interactive_widget(hint, rows[1]);
-}
-
-fn render_command_bar(frame: &mut UiFrame<'_, '_>, area: Rect, command_input: &str, status: &str) {
+#[allow(clippy::too_many_arguments)]
+fn render_prompt_bar(
+    frame: &mut UiFrame<'_, '_>,
+    area: Rect,
+    command_input: &str,
+    status: &str,
+    enable_hotkeys: bool,
+) {
     if area.height == 0 {
         return;
     }
 
-    let help_text = footer_help_text(command_input);
     let (badge_label, badge_style) = mode_badge(status, command_input);
 
     if area.height == 1 {
-        let compact = Line::from(vec![
+        let line = Line::from(vec![
             Span::styled(" ❯ ", UiStyle::PROMPT.add_modifier(Modifier::BOLD)),
-            Span::styled(command_input.to_string(), UiStyle::TEXT_PRIMARY),
-            Span::raw(" "),
-            Span::styled(format!("[{badge_label}]"), badge_style),
-        ]);
-        frame.render_widget(Paragraph::new(compact), area);
-        return;
-    }
-
-    if area.height == 2 {
-        let rows = Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).split(area);
-        frame.render_widget(
-            Paragraph::new(Line::from(Span::styled(
-                format!("  {help_text}"),
-                UiStyle::MUTED,
-            ))),
-            rows[0],
-        );
-
-        let compact = Line::from(vec![
-            Span::styled("  ❯ ", UiStyle::PROMPT.add_modifier(Modifier::BOLD)),
             Span::styled(command_input.to_string(), UiStyle::TEXT_PRIMARY),
             Span::raw("  "),
             Span::styled(format!("[{badge_label}]"), badge_style),
         ]);
-        frame.render_widget(
-            Paragraph::new(compact).block(
-                Block::default()
-                    .borders(Borders::TOP)
-                    .border_style(UiStyle::BORDER),
-            ),
-            rows[1],
-        );
+        frame.render_widget(Paragraph::new(line), area);
         return;
     }
 
-    let bar = Layout::vertical([
-        Constraint::Length(1),
-        Constraint::Length(1),
-        Constraint::Length(2),
-    ])
-    .split(area);
+    let rows = Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).split(area);
 
+    let status_line = Line::from(vec![
+        Span::styled(" ", UiStyle::MUTED),
+        Span::styled(ellipsize(status, area.width.saturating_sub(4) as usize), UiStyle::TEXT_SECONDARY),
+    ]);
     frame.render_widget(
-        Paragraph::new(Line::from(Span::styled(
-            format!("  {help_text}"),
-            UiStyle::MUTED,
-        ))),
-        bar[0],
-    );
-
-    frame.render_widget(
-        Paragraph::new(Line::from(Span::styled(
-            format!("  {status}"),
-            UiStyle::TEXT_SECONDARY,
-        )))
-        .block(
+        Paragraph::new(status_line).block(
             Block::default()
                 .borders(Borders::TOP)
-                .border_style(UiStyle::BORDER),
+                .border_style(UiStyle::ACCENT_BORDER),
         ),
-        bar[1],
+        rows[0],
     );
 
-    let input_line = Line::from(vec![
-        Span::styled("  ❯ ", UiStyle::PROMPT.add_modifier(Modifier::BOLD)),
+    let mut prompt_spans = vec![
+        Span::styled(" ❯ ", UiStyle::PROMPT.add_modifier(Modifier::BOLD)),
         Span::styled(command_input.to_string(), UiStyle::TEXT_PRIMARY),
-        Span::raw("  "),
-        Span::styled(format!("[{badge_label}]"), badge_style),
-    ]);
+    ];
 
-    frame.render_widget(Paragraph::new(input_line), bar[2]);
+    let remaining = area.width.saturating_sub(4 + command_input.len() as u16);
+    if remaining > 20 {
+        prompt_spans.push(Span::raw("  "));
+        prompt_spans.push(Span::styled(format!("[{badge_label}]"), badge_style));
+    }
+
+    frame.render_widget(Paragraph::new(Line::from(prompt_spans)), rows[1]);
+
+    if enable_hotkeys {
+        let verify = Button::new("Verify")
+            .on_click(UiAction::Verify)
+            .hover_text(Text::from("Run verification checks"))
+            .hotkey(KeyCode::Char('v'));
+        let hint_btn = Button::new("Hint")
+            .on_click(UiAction::Hint)
+            .hover_text(Text::from("Get a contextual hint"))
+            .hotkey(KeyCode::Char('h'));
+        frame.render_interactive_widget(verify, Rect::new(0, 0, 0, 0));
+        frame.render_interactive_widget(hint_btn, Rect::new(0, 0, 0, 0));
+    }
 }

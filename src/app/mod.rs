@@ -60,6 +60,7 @@ pub fn run_with_args(args: Vec<String>) -> Result<()> {
 
     let mut ui = UiScreen::new(initial_status, has_progress);
     if let Some(connect_cmd) = shell.external_connect_command() {
+        ui.learning.pairing_command = Some(connect_cmd.clone());
         ui.learning
             .output_log
             .push(format!("External shell pairing command: {connect_cmd}"));
@@ -138,7 +139,8 @@ fn run_loop(
                 break;
             }
             UiAction::StartSession => {
-                ui.transition_to_learning();
+                let area = terminal.get_frame().area();
+                ui.transition_to_learning(area);
             }
             UiAction::NewSession => {
                 engine.reset_progress();
@@ -159,6 +161,8 @@ fn run_loop(
                 ui.learning.hint_message = None;
                 ui.learning.completion_card = None;
                 ui.learning.tab_index = 0;
+                let area = terminal.get_frame().area();
+                ui.effects.trigger_step_next(area);
             }
             UiAction::PrevStep => {
                 engine.prev_step();
@@ -167,6 +171,8 @@ fn run_loop(
                 ui.learning.hint_message = None;
                 ui.learning.completion_card = None;
                 ui.learning.tab_index = 0;
+                let area = terminal.get_frame().area();
+                ui.effects.trigger_step_prev(area);
             }
             UiAction::JumpBack => {
                 engine.jump_prev_completed();
@@ -184,8 +190,12 @@ fn run_loop(
                 ui.learning.completion_card = None;
                 ui.learning.tab_index = 0;
             }
-            UiAction::Verify => match run_verify(engine.current_step())? {
+            UiAction::Verify => {
+                let verify_area = terminal.get_frame().area();
+                ui.effects.trigger_verify_running(verify_area);
+                match run_verify(engine.current_step())? {
                 VerifyOutcome::Pass => {
+                    ui.effects.trigger_verify_pass(verify_area);
                     let readiness_before = engine.readiness;
                     let finished = engine.current_step().clone();
                     let finished_id = engine.current_step().id.clone();
@@ -242,6 +252,7 @@ fn run_loop(
                     ui.learning.tab_index = 0;
                 }
                 VerifyOutcome::Fail(msg) => {
+                    ui.effects.trigger_verify_fail(verify_area);
                     ui.push_popup(PopupMessage::VerifyFail {
                         message: msg.clone(),
                     });
@@ -250,7 +261,7 @@ fn run_loop(
                     ui.learning.completion_card = None;
                     ui.learning.tab_index = 0;
                 }
-            },
+            }},
             UiAction::Hint => {
                 ui.learning.hint_message =
                     Some(coach.hint(engine.current_step(), &ui.learning.output_log));
@@ -300,6 +311,7 @@ fn run_loop(
                     ));
                     if parsed == ShellMode::External {
                         if let Some(connect_cmd) = shell.external_connect_command() {
+                            ui.learning.pairing_command = Some(connect_cmd.clone());
                             ui.learning
                                 .output_log
                                 .push(format!("External shell pairing command: {connect_cmd}"));
@@ -326,6 +338,8 @@ fn run_loop(
                         ui.learning.status =
                             format!("Ran [{}]: {}", shell.mode().as_str(), raw_cmd);
                         ui.learning.output_log.push(dispatch);
+                        let area = terminal.get_frame().area();
+                        ui.effects.trigger_command_sent(area);
                     }
                     GuardDecision::Confirm(msg) => {
                         ui.learning.status = format!("{} (prefix with '! ' to confirm)", msg);
