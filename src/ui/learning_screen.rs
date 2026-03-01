@@ -15,12 +15,13 @@ use super::{
     clickable_list::ClickableList,
     cluster_view::ClusterView,
     constants::UiStyle,
+    effects,
     traits::Screen,
-    ui_frame::UiFrame,
     ui_action::UiAction,
+    ui_frame::UiFrame,
     widgets::{
-        default_block, difficulty_badge, domain_tag, ellipsize, footer_help_text, mode_badge,
-        readiness_segments, step_type_badge, titled_block,
+        difficulty_badge, domain_tag, ellipsize, footer_help_text, mode_badge,
+        readiness_segments, step_type_badge,
     },
 };
 
@@ -33,6 +34,8 @@ pub struct LearningScreen {
     pub hint_message: Option<String>,
     pub completion_card: Option<CompletionCard>,
     pub tab_index: usize,
+    first_render: bool,
+    tick: usize,
 }
 
 impl LearningScreen {
@@ -44,29 +47,43 @@ impl LearningScreen {
             hint_message: None,
             completion_card: None,
             tab_index: 0,
+            first_render: true,
+            tick: 0,
         }
     }
 }
 
 impl Screen for LearningScreen {
     fn update(&mut self, _engine: &Engine) -> anyhow::Result<()> {
+        self.tick = self.tick.wrapping_add(1);
         Ok(())
     }
 
-    fn render(&mut self, frame: &mut UiFrame<'_, '_>, engine: &Engine, area: Rect) -> anyhow::Result<()> {
+    fn render(
+        &mut self,
+        frame: &mut UiFrame<'_, '_>,
+        engine: &Engine,
+        area: Rect,
+    ) -> anyhow::Result<()> {
         let zones = Layout::vertical([
-            Constraint::Length(3),
+            Constraint::Length(4),
             Constraint::Min(0),
             Constraint::Length(3),
             Constraint::Length(4),
         ])
         .split(area);
 
-        render_header(frame, zones[0], engine);
+        render_header(frame, zones[0], engine, self.tick);
+
+        if self.first_render {
+            frame.push_effect("learning_header", effects::header_sweep(), zones[0]);
+            frame.push_effect("learning_body", effects::screen_transition_in(), zones[1]);
+            self.first_render = false;
+        }
 
         if zones[1].width >= WIDE_TERMINAL_THRESHOLD {
             let split =
-                Layout::horizontal([Constraint::Percentage(70), Constraint::Percentage(30)])
+                Layout::horizontal([Constraint::Percentage(68), Constraint::Percentage(32)])
                     .split(zones[1]);
             render_main_feed(
                 frame,
@@ -84,6 +101,7 @@ impl Screen for LearningScreen {
                 self.hint_message.as_deref(),
                 self.completion_card.as_ref(),
                 &self.status,
+                self.tick,
             );
         } else {
             render_main_feed(
@@ -172,36 +190,49 @@ impl Screen for LearningScreen {
         vec![
             ("V".to_string(), "Verify".to_string()),
             ("H".to_string(), "Hint".to_string()),
+            ("S".to_string(), "Suggest".to_string()),
             ("Enter".to_string(), "Run".to_string()),
             ("/help".to_string(), "Commands".to_string()),
         ]
     }
 }
 
-fn render_header(frame: &mut UiFrame<'_, '_>, area: Rect, engine: &Engine) {
+fn render_header(frame: &mut UiFrame<'_, '_>, area: Rect, engine: &Engine, tick: usize) {
     let step = engine.current_step();
-    let block = default_block();
-    let inner = block.inner(area);
-    frame.render_widget(block, area);
 
-    let (bar_on, bar_off) = readiness_segments(engine.readiness, 12);
+    let header_block = Block::bordered()
+        .border_style(UiStyle::BORDER_ACTIVE)
+        .style(UiStyle::PANEL_BG);
+    let inner = header_block.inner(area);
+    frame.render_widget(header_block, area);
+
+    let (bar_on, bar_off) = readiness_segments(engine.readiness, 16);
 
     let step_chip = format!(
-        "[STEP {:02}/{:02}]",
+        "[{:02}/{:02}]",
         engine.current_index + 1,
         engine.steps.len()
     );
 
     let title = ellipsize(&step.title, inner.width.saturating_sub(4) as usize);
 
+    let pulse = if (tick / 5).is_multiple_of(2) { "◉" } else { "●" };
+
     let row1 = Line::from(vec![
-        Span::styled(" CKA BUDDY ", UiStyle::HEADER.add_modifier(Modifier::BOLD)),
-        Span::styled(" [", UiStyle::MUTED),
+        Span::styled(
+            format!(" {pulse} CKA BUDDY "),
+            UiStyle::HEADER.add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("▐", UiStyle::MUTED),
         Span::styled(bar_on, UiStyle::OK),
         Span::styled(bar_off, UiStyle::MUTED),
-        Span::styled("] ", UiStyle::MUTED),
-        Span::styled(format!("{:>3}%  ", engine.readiness), UiStyle::TEXT_PRIMARY),
-        Span::styled(step_chip, UiStyle::HIGHLIGHT),
+        Span::styled("▌ ", UiStyle::MUTED),
+        Span::styled(
+            format!("{:>3}%", engine.readiness),
+            UiStyle::TEXT_PRIMARY.add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("  ", UiStyle::MUTED),
+        Span::styled(&step_chip, UiStyle::HIGHLIGHT),
         Span::raw(" "),
         step_type_badge(&step.step_type),
         Span::raw(" "),
@@ -209,7 +240,7 @@ fn render_header(frame: &mut UiFrame<'_, '_>, area: Rect, engine: &Engine) {
     ]);
 
     let mut row2_spans = vec![
-        Span::raw("  "),
+        Span::styled("  ☸ ", UiStyle::HIGHLIGHT),
         Span::styled(title, UiStyle::TEXT_PRIMARY.add_modifier(Modifier::BOLD)),
         Span::raw("  "),
     ];
@@ -233,7 +264,6 @@ fn render_main_feed(
 ) {
     let step = engine.current_step();
     let command_count = step.run_commands.len().min(5) as u16;
-    // Each command now takes 2 lines (blurb + command), so double the count
     let step_panel_height =
         (6 + command_count * 2).clamp(6, area.height.saturating_sub(8).max(6));
 
@@ -246,13 +276,17 @@ fn render_main_feed(
 
 fn render_step_panel(frame: &mut UiFrame<'_, '_>, area: Rect, engine: &Engine) {
     let step = engine.current_step();
-    let block = titled_block("Step");
+
+    let block = Block::bordered()
+        .border_style(UiStyle::BORDER_ACTIVE)
+        .title(Span::styled(" ☸ Step ", UiStyle::HIGHLIGHT))
+        .style(UiStyle::PANEL_BG);
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
     let mut lines = vec![
         Line::from(vec![
-            Span::styled("  Objective: ", UiStyle::MUTED),
+            Span::styled("  ◆ Objective: ", UiStyle::HIGHLIGHT),
             Span::styled(
                 step.objective.clone(),
                 UiStyle::TEXT_PRIMARY.add_modifier(Modifier::BOLD),
@@ -260,7 +294,7 @@ fn render_step_panel(frame: &mut UiFrame<'_, '_>, area: Rect, engine: &Engine) {
         ]),
         Line::from(vec![Span::styled(
             format!(
-                "  {} min  |  {}  |  {}",
+                "    ⏱ {} min  │  {}  │  {}",
                 step.timebox_min,
                 step.difficulty,
                 step.domains.join(", ")
@@ -277,11 +311,14 @@ fn render_step_panel(frame: &mut UiFrame<'_, '_>, area: Rect, engine: &Engine) {
         )));
         frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
     } else {
-        lines.push(Line::from(Span::styled("  Runbook:", UiStyle::MUTED)));
+        lines.push(Line::from(Span::styled(
+            "  ▾ Runbook:",
+            UiStyle::TEXT_SECONDARY.add_modifier(Modifier::BOLD),
+        )));
         for (idx, cmd) in step.run_commands.iter().take(5).enumerate() {
             let blurb = command_blurb(cmd);
             lines.push(Line::from(vec![
-                Span::styled(format!("  [{:>1}] ", idx + 1), UiStyle::MUTED),
+                Span::styled(format!("  [{idx}] "), UiStyle::MUTED),
                 Span::styled(blurb, UiStyle::TEXT_PRIMARY),
             ]));
         }
@@ -297,7 +334,7 @@ fn render_step_panel(frame: &mut UiFrame<'_, '_>, area: Rect, engine: &Engine) {
                 .run_commands
                 .iter()
                 .take(rows)
-                .map(|cmd| cmd.clone())
+                .cloned()
                 .collect::<Vec<_>>();
             let actions = items
                 .iter()
@@ -318,7 +355,10 @@ fn render_terminal_feed(
     hint_message: Option<&str>,
     completion_card: Option<&CompletionCard>,
 ) {
-    let block = titled_block("Terminal");
+    let block = Block::bordered()
+        .border_style(UiStyle::BORDER)
+        .title(Span::styled(" ▸ Terminal ", UiStyle::TEXT_SECONDARY))
+        .style(UiStyle::PANEL_BG);
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
@@ -335,7 +375,7 @@ fn render_terminal_feed(
     if let Some(hint) = hint_message {
         lines.push(Line::from(""));
         lines.push(Line::from(vec![
-            Span::styled("  ● Hint: ", UiStyle::WARNING.add_modifier(Modifier::BOLD)),
+            Span::styled("  ◈ Hint: ", UiStyle::WARNING.add_modifier(Modifier::BOLD)),
             Span::styled(
                 hint.to_string(),
                 UiStyle::WARNING.add_modifier(Modifier::ITALIC),
@@ -358,7 +398,7 @@ fn render_terminal_feed(
         if !card.next_commands.is_empty() {
             lines.push(Line::from(vec![
                 Span::styled("    Next: ", UiStyle::MUTED),
-                Span::styled(card.next_commands.join(" | "), UiStyle::MUTED),
+                Span::styled(card.next_commands.join(" │ "), UiStyle::MUTED),
             ]));
         }
     }
@@ -390,7 +430,7 @@ fn status_badge(status: &str) -> (&'static str, ratatui::style::Style) {
         || lower.contains("complete")
         || lower.contains("ready")
     {
-        ("SUCCESS", UiStyle::OK)
+        ("OK", UiStyle::OK)
     } else {
         ("INFO", UiStyle::HIGHLIGHT)
     };
@@ -405,28 +445,55 @@ fn render_activity_rail(
     hint_message: Option<&str>,
     completion_card: Option<&CompletionCard>,
     status: &str,
+    tick: usize,
 ) {
-    let block = titled_block("Activity");
+    let block = Block::bordered()
+        .border_style(UiStyle::BORDER)
+        .title(Span::styled(" ⚡ Activity ", UiStyle::HIGHLIGHT))
+        .style(UiStyle::PANEL_BG);
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    let sections = Layout::vertical([Constraint::Min(6), Constraint::Length(6)]).split(inner);
+    let sections = Layout::vertical([Constraint::Min(6), Constraint::Length(8)]).split(inner);
 
-    let cluster = ClusterView::new("CLUSTER", "k8s", run_commands, run_commands.len());
+    let cluster = ClusterView::new("CLUSTER", "k8s", run_commands, tick);
     frame.render_widget(cluster, sections[0]);
 
     let (status_label, status_style) = status_badge(status);
-    let mut lines = vec![Line::from(vec![
-        Span::styled("  Status ", UiStyle::MUTED),
-        Span::styled(format!("[{status_label}]"), status_style),
-    ])];
+
+    let heartbeat = if (tick / 8).is_multiple_of(2) { "◉" } else { "●" };
+
+    let mut lines = vec![
+        Line::from(vec![
+            Span::styled(format!("  {heartbeat} Status "), UiStyle::MUTED),
+            Span::styled(format!("[{status_label}]"), status_style),
+        ]),
+        Line::from(Span::styled(
+            format!("  {}", ellipsize(status, inner.width.saturating_sub(4) as usize)),
+            UiStyle::TEXT_SECONDARY,
+        )),
+    ];
 
     if let Some(hint) = hint_message {
-        lines.push(Line::from(Span::styled(format!("  {hint}"), UiStyle::WARNING)));
+        lines.push(Line::from(""));
+        lines.push(Line::from(vec![
+            Span::styled("  ◈ ", UiStyle::WARNING),
+            Span::styled(
+                ellipsize(hint, inner.width.saturating_sub(6) as usize),
+                UiStyle::WARNING,
+            ),
+        ]));
     }
 
     if let Some(card) = completion_card {
-        lines.push(Line::from(Span::styled(format!("  {}", card.done), UiStyle::OK)));
+        lines.push(Line::from(""));
+        lines.push(Line::from(vec![
+            Span::styled("  ✓ ", UiStyle::OK),
+            Span::styled(
+                ellipsize(&card.done, inner.width.saturating_sub(6) as usize),
+                UiStyle::OK,
+            ),
+        ]));
     }
 
     frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), sections[1]);
@@ -437,21 +504,76 @@ fn render_action_row(frame: &mut UiFrame<'_, '_>, area: Rect, enable_hotkeys: bo
         return;
     }
 
-    let rows = Layout::horizontal([Constraint::Length(14), Constraint::Length(12), Constraint::Min(0)])
-        .split(area);
+    let rows = Layout::horizontal([
+        Constraint::Length(14),
+        Constraint::Length(12),
+        Constraint::Length(14),
+        Constraint::Length(12),
+        Constraint::Length(12),
+        Constraint::Min(0),
+    ])
+    .split(area);
 
     let verify = {
-        let b = Button::new("Verify").on_click(UiAction::Verify).hover_text(Text::from("Run verification checks"));
-        if enable_hotkeys { b.hotkey(KeyCode::Char('v')) } else { b }
+        let b = Button::new("⚡ Verify")
+            .on_click(UiAction::Verify)
+            .hover_text(Text::from("Run verification checks for current step"));
+        if enable_hotkeys {
+            b.hotkey(KeyCode::Char('v'))
+        } else {
+            b
+        }
     };
 
     let hint = {
-        let b = Button::new("Hint").on_click(UiAction::Hint).hover_text(Text::from("Get a contextual hint"));
-        if enable_hotkeys { b.hotkey(KeyCode::Char('h')) } else { b }
+        let b = Button::new("◈ Hint")
+            .on_click(UiAction::Hint)
+            .hover_text(Text::from("Get a contextual hint from the coach"));
+        if enable_hotkeys {
+            b.hotkey(KeyCode::Char('h'))
+        } else {
+            b
+        }
+    };
+
+    let suggest = {
+        let b = Button::new("▸ Suggest")
+            .on_click(UiAction::Suggest(None))
+            .hover_text(Text::from("Load next suggested command"));
+        if enable_hotkeys {
+            b.hotkey(KeyCode::Char('s'))
+        } else {
+            b
+        }
+    };
+
+    let next = {
+        let b = Button::new("Next →")
+            .on_click(UiAction::NextStep)
+            .hover_text(Text::from("Go to next step"));
+        if enable_hotkeys {
+            b.hotkey(KeyCode::Right)
+        } else {
+            b
+        }
+    };
+
+    let prev = {
+        let b = Button::new("← Prev")
+            .on_click(UiAction::PrevStep)
+            .hover_text(Text::from("Go to previous step"));
+        if enable_hotkeys {
+            b.hotkey(KeyCode::Left)
+        } else {
+            b
+        }
     };
 
     frame.render_interactive_widget(verify, rows[0]);
     frame.render_interactive_widget(hint, rows[1]);
+    frame.render_interactive_widget(suggest, rows[2]);
+    frame.render_interactive_widget(next, rows[3]);
+    frame.render_interactive_widget(prev, rows[4]);
 }
 
 fn render_command_bar(frame: &mut UiFrame<'_, '_>, area: Rect, command_input: &str, status: &str) {
@@ -528,9 +650,11 @@ fn render_command_bar(frame: &mut UiFrame<'_, '_>, area: Rect, command_input: &s
         bar[1],
     );
 
+    let cursor_blink = "█";
     let input_line = Line::from(vec![
         Span::styled("  ❯ ", UiStyle::PROMPT.add_modifier(Modifier::BOLD)),
         Span::styled(command_input.to_string(), UiStyle::TEXT_PRIMARY),
+        Span::styled(cursor_blink, UiStyle::HIGHLIGHT),
         Span::raw("  "),
         Span::styled(format!("[{badge_label}]"), badge_style),
     ]);

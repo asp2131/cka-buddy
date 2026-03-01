@@ -4,6 +4,7 @@ pub mod callback_registry;
 pub mod constants;
 pub mod clickable_list;
 pub mod cluster_view;
+pub mod effects;
 pub mod learning_screen;
 pub mod popup;
 pub mod splash_screen;

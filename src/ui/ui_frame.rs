@@ -1,16 +1,24 @@
 use ratatui::{
     Frame,
+    buffer::Buffer,
     layout::Rect,
     widgets::{StatefulWidget, Widget},
 };
 
-use super::{callback_registry::CallbackRegistry, traits::InteractiveWidget};
+use super::{callback_registry::CallbackRegistry, effects::VisualEffect, traits::InteractiveWidget};
+
+pub struct PendingEffect {
+    pub id: String,
+    pub effect: VisualEffect,
+    pub area: Rect,
+}
 
 pub struct UiFrame<'a, 'b> {
     frame: &'a mut Frame<'b>,
     callback_registry: CallbackRegistry,
     hover_text_area: Rect,
     hover_text: Option<String>,
+    pending_effects: Vec<PendingEffect>,
 }
 
 impl<'a, 'b> UiFrame<'a, 'b> {
@@ -24,6 +32,7 @@ impl<'a, 'b> UiFrame<'a, 'b> {
             callback_registry: CallbackRegistry::with_mouse_position(mouse_position),
             hover_text_area,
             hover_text: None,
+            pending_effects: Vec::new(),
         }
     }
 
@@ -91,7 +100,27 @@ impl<'a, 'b> UiFrame<'a, 'b> {
         self.hover_text.as_deref()
     }
 
-    pub fn into_registry(self) -> CallbackRegistry {
-        self.callback_registry
+    pub fn buffer_mut(&mut self) -> &mut Buffer {
+        self.frame.buffer_mut()
+    }
+
+    pub fn push_effect(&mut self, id: impl Into<String>, effect: VisualEffect, area: Rect) {
+        self.pending_effects.push(PendingEffect {
+            id: id.into(),
+            effect,
+            area,
+        });
+    }
+
+    pub fn has_pending_effect(&self, id: &str) -> bool {
+        self.pending_effects.iter().any(|e| e.id == id)
+    }
+
+    pub fn drain_pending_effects(&mut self) -> Vec<PendingEffect> {
+        std::mem::take(&mut self.pending_effects)
+    }
+
+    pub fn into_registry(self) -> (CallbackRegistry, Vec<PendingEffect>) {
+        (self.callback_registry, self.pending_effects)
     }
 }

@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Clear, Paragraph},
+    widgets::{Block, Clear, Paragraph},
 };
 
 use crate::app::engine::Engine;
@@ -13,6 +13,7 @@ use crate::app::engine::Engine;
 use super::{
     callback_registry::CallbackRegistry,
     constants::{UiStyle, centered_clamped_viewport},
+    effects::EffectState,
     learning_screen::LearningScreen,
     popup::PopupMessage,
     splash_screen::SplashScreen,
@@ -33,6 +34,7 @@ pub struct UiScreen {
     pub learning: LearningScreen,
     pub popup_stack: Vec<PopupMessage>,
     callback_registry: CallbackRegistry,
+    pub effect_state: EffectState,
 }
 
 impl UiScreen {
@@ -43,6 +45,7 @@ impl UiScreen {
             learning: LearningScreen::new(initial_status),
             popup_stack: Vec::new(),
             callback_registry: CallbackRegistry::default(),
+            effect_state: EffectState::new(),
         }
     }
 
@@ -60,6 +63,7 @@ impl UiScreen {
 
     pub fn transition_to_learning(&mut self) {
         self.state = ScreenState::Learning;
+        self.effect_state.clear();
     }
 
     pub fn update(&mut self, engine: &Engine) -> Result<()> {
@@ -76,40 +80,61 @@ impl UiScreen {
         engine: &Engine,
         mouse_position: Option<(u16, u16)>,
     ) -> Result<()> {
-        let area = centered_clamped_viewport(frame.area());
+        let full_area = frame.area();
 
+        frame.render_widget(
+            Block::default().style(Style::default().bg(Color::Rgb(14, 18, 28))),
+            full_area,
+        );
+
+        let area = centered_clamped_viewport(full_area);
+        let has_popup = self.has_popup();
         let (body_area, footer_area, hover_area) = split_shell(area);
 
-        let mut ui_frame = UiFrame::new(frame, hover_area.unwrap_or(Rect::new(0, 0, 0, 0)), mouse_position);
-        ui_frame.set_active_layer(if self.has_popup() { 1 } else { 0 });
+        let mut ui_frame = UiFrame::new(
+            frame,
+            hover_area.unwrap_or(Rect::new(0, 0, 0, 0)),
+            mouse_position,
+        );
+        ui_frame.set_active_layer(if has_popup { 1 } else { 0 });
 
         match self.state {
             ScreenState::Splash => self.splash.render(&mut ui_frame, engine, body_area)?,
             ScreenState::Learning => self.learning.render(&mut ui_frame, engine, body_area)?,
         }
 
-        if self.popup_stack.last().is_some() {
+        if has_popup {
             ui_frame.render_widget(Clear, body_area);
             ui_frame.render_widget(
-                ratatui::widgets::Block::default()
-                    .style(Style::default().bg(Color::Rgb(14, 18, 28))),
+                Block::default().style(Style::default().bg(Color::Rgb(14, 18, 28))),
                 body_area,
             );
             match self.state {
                 ScreenState::Splash => self.splash.render(&mut ui_frame, engine, body_area)?,
-                ScreenState::Learning => self.learning.render(&mut ui_frame, engine, body_area)?,
+                ScreenState::Learning => {
+                    self.learning.render(&mut ui_frame, engine, body_area)?
+                }
             }
         }
 
+        let footer_spans = self.active_footer_spans();
         if let Some(footer) = footer_area {
-            render_footer(&mut ui_frame, footer, self.active_footer_spans());
+            render_footer(&mut ui_frame, footer, footer_spans);
         }
 
         if let Some(hover) = hover_area {
             render_hover_help(&mut ui_frame, hover);
         }
 
-        self.callback_registry = ui_frame.into_registry();
+        self.effect_state.process_all(ui_frame.buffer_mut());
+
+        let pending = ui_frame.drain_pending_effects();
+        for p in pending {
+            self.effect_state.push(p.id, p.effect, p.area);
+        }
+
+        let (registry, _) = ui_frame.into_registry();
+        self.callback_registry = registry;
 
         if let Some(popup) = self.popup_stack.last() {
             popup.render(frame, area);
@@ -147,7 +172,6 @@ impl UiScreen {
             return Some(UiAction::Quit);
         }
 
-        // Popup takes priority
         if let Some(popup) = self.popup_stack.last_mut() {
             return handle_popup_key(key, popup);
         }
