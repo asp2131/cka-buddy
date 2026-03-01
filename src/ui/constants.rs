@@ -45,6 +45,12 @@ impl UiStyle {
         .fg(Color::Rgb(205, 210, 225))
         .bg(Color::Rgb(36, 41, 56));
     pub const HOVER_HELP: Style = Self::DEFAULT.fg(Color::Rgb(170, 180, 200));
+    pub const PANEL_BG: Style = Self::DEFAULT.bg(Color::Rgb(18, 22, 34));
+    pub const ACCENT_BORDER: Style = Self::DEFAULT.fg(Color::Rgb(70, 80, 110));
+    pub const PAIRING_CMD: Style = Self::DEFAULT
+        .fg(Color::Rgb(255, 220, 100))
+        .bg(Color::Rgb(40, 35, 15));
+    pub const ASSISTANT_BG: Style = Self::DEFAULT.bg(Color::Rgb(20, 25, 38));
 
     pub const DOMAIN_STORAGE: Style = Self::DEFAULT.fg(Color::Rgb(180, 120, 255));
     pub const DOMAIN_NETWORKING: Style = Self::DEFAULT.fg(Color::Rgb(100, 200, 255));

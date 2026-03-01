@@ -1,7 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::Style,
+    style::{Modifier, Style},
     text::Line,
     widgets::Widget,
 };
@@ -32,48 +32,64 @@ pub enum Mood {
     Happy,
     Idle,
     Sick,
-    Eating,
+    Thinking,
 }
 
 #[derive(Debug, Clone)]
-pub struct Tamagotchi {
+pub struct KubeChanAssistant {
     pub stage: EvolutionStage,
     pub mood: Mood,
     pub tick: usize,
-    pub name: String,
-    pub pod_count: usize,
-    pub healthy_pods: usize,
     pub readiness: u8,
+    pub objective: String,
+    pub domains: Vec<String>,
+    pub difficulty: String,
+    pub tip: Option<String>,
+    pub hint_message: Option<String>,
 }
 
-impl Tamagotchi {
-    pub fn new(readiness: u8, pods: &[String], tick: usize) -> Self {
+impl KubeChanAssistant {
+    pub fn new(
+        readiness: u8,
+        tick: usize,
+        objective: &str,
+        domains: &[String],
+        difficulty: &str,
+        fallback_hint: Option<&str>,
+        run_commands: &[String],
+        hint_message: Option<&str>,
+        has_completion: bool,
+    ) -> Self {
         let stage = EvolutionStage::from_readiness(readiness);
-        let pod_count = pods.len();
-        let fail_count = pods
-            .iter()
-            .filter(|p| p.to_ascii_lowercase().contains("fail"))
-            .count();
-        let healthy_pods = pod_count.saturating_sub(fail_count);
 
-        let mood = if fail_count > 0 {
-            Mood::Sick
-        } else if pod_count > 0 && (tick / 20).is_multiple_of(8) {
-            Mood::Eating
+        let mood = if has_completion {
+            Mood::Happy
+        } else if hint_message.is_some() {
+            Mood::Thinking
         } else if readiness > 50 {
             Mood::Happy
         } else {
             Mood::Idle
         };
 
+        let tip = if let Some(hint) = hint_message {
+            Some(hint.to_string())
+        } else if let Some(fh) = fallback_hint {
+            Some(fh.to_string())
+        } else {
+            run_commands.first().map(|cmd| format!("Start with: {}", cmd))
+        };
+
         Self {
             stage,
             mood,
             tick,
-            name: "Kube-chan".to_string(),
-            pod_count,
-            healthy_pods,
             readiness,
+            objective: objective.to_string(),
+            domains: domains.to_vec(),
+            difficulty: difficulty.to_string(),
+            tip,
+            hint_message: hint_message.map(|s| s.to_string()),
         }
     }
 
@@ -114,322 +130,175 @@ impl Tamagotchi {
         );
     }
 
-    fn creature_art(&self) -> (&[&str], Style) {
+    fn creature_face(&self) -> (&str, Style) {
         let frame = (self.tick / 12) % 2;
         match self.stage {
             EvolutionStage::Egg => {
-                let art = if frame == 0 {
-                    EGG_FRAME_0
-                } else {
-                    EGG_FRAME_1
-                };
-                (art, UiStyle::TEXT_SECONDARY)
+                let face = if frame == 0 { "  ( ◉‿◉ )  " } else { "  ( ●‿● )  " };
+                (face, UiStyle::TEXT_SECONDARY)
             }
             EvolutionStage::Hatchling => {
-                let art = if frame == 0 {
-                    HATCHLING_FRAME_0
-                } else {
-                    HATCHLING_FRAME_1
+                let (face, style) = match self.mood {
+                    Mood::Happy => (if frame == 0 { " ☸( ◉ω◉ )☸" } else { " ☸( ◉ω◉ )♥" }, UiStyle::OK),
+                    Mood::Thinking => (" ☸( ◉_◉ )?" , UiStyle::HIGHLIGHT),
+                    Mood::Sick => (" ☸( ×_× )!" , UiStyle::WARNING),
+                    Mood::Idle => (if frame == 0 { " ☸( ◉_◉ )☸" } else { " ☸( ●_● )☸" }, UiStyle::TEXT_SECONDARY),
                 };
-                let style = match self.mood {
-                    Mood::Happy => UiStyle::OK,
-                    Mood::Sick => UiStyle::WARNING,
-                    Mood::Eating => UiStyle::HIGHLIGHT,
-                    Mood::Idle => UiStyle::TEXT_SECONDARY,
-                };
-                (art, style)
+                (face, style)
             }
             EvolutionStage::Juvenile => {
-                let art = match self.mood {
-                    Mood::Happy => {
-                        if frame == 0 {
-                            JUVENILE_HAPPY_0
-                        } else {
-                            JUVENILE_HAPPY_1
-                        }
-                    }
-                    Mood::Sick => JUVENILE_SICK,
-                    Mood::Eating => JUVENILE_EATING,
-                    Mood::Idle => {
-                        if frame == 0 {
-                            JUVENILE_IDLE_0
-                        } else {
-                            JUVENILE_IDLE_1
-                        }
-                    }
+                let (face, style) = match self.mood {
+                    Mood::Happy => (if frame == 0 { "☸☸( ◉ω◉ )☸☸" } else { "☸☸( ◉ω◉ )♥♥" }, UiStyle::OK),
+                    Mood::Thinking => ("☸☸( ◉_◉ )??", UiStyle::HIGHLIGHT),
+                    Mood::Sick => ("☸☸( ×_× )!!", UiStyle::ERROR),
+                    Mood::Idle => (if frame == 0 { "☸☸( ◉_◉ )☸☸" } else { "☸☸( ●_● )☸☸" }, UiStyle::TEXT_PRIMARY),
                 };
-                let style = match self.mood {
-                    Mood::Happy => UiStyle::OK,
-                    Mood::Sick => UiStyle::ERROR,
-                    Mood::Eating => UiStyle::HIGHLIGHT,
-                    Mood::Idle => UiStyle::TEXT_PRIMARY,
-                };
-                (art, style)
+                (face, style)
             }
             EvolutionStage::Adult => {
-                let art = match self.mood {
-                    Mood::Happy => {
-                        if frame == 0 {
-                            ADULT_HAPPY_0
-                        } else {
-                            ADULT_HAPPY_1
-                        }
-                    }
-                    Mood::Sick => ADULT_SICK,
-                    Mood::Eating => ADULT_EATING,
-                    Mood::Idle => {
-                        if frame == 0 {
-                            ADULT_IDLE_0
-                        } else {
-                            ADULT_IDLE_1
-                        }
-                    }
+                let (face, style) = match self.mood {
+                    Mood::Happy => (if frame == 0 { "☸☸☸( ◉ω◉ )☸☸☸" } else { "☸☸☸( ◉ω◉ )♥♥♥" }, UiStyle::OK),
+                    Mood::Thinking => ("☸☸☸( ◉_◉ )???", UiStyle::HIGHLIGHT),
+                    Mood::Sick => ("☸☸☸( ×_× )!!!", UiStyle::ERROR),
+                    Mood::Idle => (if frame == 0 { "☸☸☸( ◉_◉ )☸☸☸" } else { "☸☸☸( ●_● )☸☸☸" }, UiStyle::HEADER),
                 };
-                let style = match self.mood {
-                    Mood::Happy => UiStyle::OK,
-                    Mood::Sick => UiStyle::ERROR,
-                    Mood::Eating => UiStyle::HIGHLIGHT,
-                    Mood::Idle => UiStyle::HEADER,
-                };
-                (art, style)
+                (face, style)
             }
         }
     }
 
-    fn status_line(&self) -> String {
-        let heartbeat = if (self.tick / 8).is_multiple_of(2) { "◉" } else { "●" };
-        let mood_icon = match self.mood {
-            Mood::Happy => "♥",
-            Mood::Idle => "~",
-            Mood::Sick => "✖",
-            Mood::Eating => "☸",
-        };
-        format!(
-            "{} {} {}% | {} {}/{}",
-            heartbeat, mood_icon, self.readiness, self.name, self.healthy_pods, self.pod_count
-        )
+    fn domain_explanation(&self) -> &str {
+        if self.domains.is_empty() {
+            return "General Kubernetes skills.";
+        }
+        let first = self.domains[0].to_lowercase();
+        if first.contains("storage") {
+            "Persistent data matters. Pods\ndie, but volumes survive."
+        } else if first.contains("network") {
+            "Services connect pods. This is\nhow traffic reaches your apps."
+        } else if first.contains("workload") || first.contains("scheduling") {
+            "Workloads are the heart of k8s.\nDeployments, pods, containers."
+        } else if first.contains("cluster") {
+            "Cluster management keeps the\ncontrol plane healthy."
+        } else if first.contains("security") || first.contains("rbac") {
+            "Security locks things down.\nRBAC, secrets, policies."
+        } else if first.contains("troubleshoot") {
+            "Something's broken. Logs, events\nand describe are your friends."
+        } else {
+            "Core Kubernetes concepts for\nthe CKA exam."
+        }
+    }
+
+    fn wrap_text(text: &str, width: usize) -> Vec<String> {
+        let mut lines = Vec::new();
+        for paragraph in text.split('\n') {
+            let words: Vec<&str> = paragraph.split_whitespace().collect();
+            if words.is_empty() {
+                lines.push(String::new());
+                continue;
+            }
+            let mut current = String::new();
+            for word in words {
+                if current.is_empty() {
+                    current = word.to_string();
+                } else if current.len() + 1 + word.len() <= width {
+                    current.push(' ');
+                    current.push_str(word);
+                } else {
+                    lines.push(current);
+                    current = word.to_string();
+                }
+            }
+            if !current.is_empty() {
+                lines.push(current);
+            }
+        }
+        lines
     }
 }
 
-impl Widget for Tamagotchi {
+impl Widget for KubeChanAssistant {
     fn render(self, area: Rect, buf: &mut Buffer) {
         if area.width < 6 || area.height < 3 {
             return;
         }
 
-        if area.height < 8 || area.width < 16 {
+        let inner_width = area.width.saturating_sub(2) as usize;
+
+        if area.height < 6 || area.width < 14 {
             let pulse = if (self.tick / 8).is_multiple_of(2) { "◉" } else { "●" };
-            let mood = match self.mood {
-                Mood::Happy => "♥",
-                Mood::Idle => "~",
-                Mood::Sick => "✖",
-                Mood::Eating => "☸",
-            };
-            let summary = format!("{pulse} {mood} {}% | {}", self.readiness, self.name);
+            let summary = format!("{pulse} Kube-chan | {}%", self.readiness);
             Self::put_line(buf, area, 0, &summary, UiStyle::HIGHLIGHT);
             return;
         }
 
-        let (art, creature_style) = self.creature_art();
-
         let mut y = 0u16;
 
         let stage_label = match self.stage {
-            EvolutionStage::Egg => "EGG",
-            EvolutionStage::Hatchling => "HATCHLING",
-            EvolutionStage::Juvenile => "JUVENILE",
-            EvolutionStage::Adult => "MASTER",
+            EvolutionStage::Egg => "Kube-chan",
+            EvolutionStage::Hatchling => "Kube-chan",
+            EvolutionStage::Juvenile => "Kube-san",
+            EvolutionStage::Adult => "Kube-sensei",
         };
-        let header = format!("┌─ {} ─┐", stage_label);
-        Self::put_line(buf, area, y, &header, UiStyle::BORDER);
+
+        let header = format!(" ☸ {} ", stage_label);
+        Self::put_centered(buf, area, y, &header, UiStyle::HEADER.add_modifier(Modifier::BOLD));
         y += 1;
 
-        for line in art {
-            if y >= area.height.saturating_sub(3) {
-                break;
-            }
-            Self::put_centered(buf, area, y, line, creature_style);
+        let (face, face_style) = self.creature_face();
+        Self::put_centered(buf, area, y, face, face_style);
+        y += 1;
+
+        let bar_width = inner_width.min(20);
+        let filled = (self.readiness as usize * bar_width) / 100;
+        let empty = bar_width.saturating_sub(filled);
+        let bar = format!(" {}{}  {}%", "█".repeat(filled), "░".repeat(empty), self.readiness);
+        let bar_style = if self.readiness >= 75 {
+            UiStyle::OK
+        } else if self.readiness >= 40 {
+            UiStyle::WARNING
+        } else {
+            UiStyle::MUTED
+        };
+        Self::put_centered(buf, area, y, &bar, bar_style);
+        y += 1;
+
+        if y < area.height {
+            let sep = "─".repeat(inner_width.min(area.width as usize));
+            Self::put_line(buf, area, y, &format!(" {sep}"), UiStyle::BORDER);
             y += 1;
         }
 
-        if y < area.height.saturating_sub(2) {
-            let footer = format!("└{}┘", "─".repeat(area.width.saturating_sub(2) as usize));
-            Self::put_line(buf, area, y, &footer, UiStyle::BORDER);
+        let domain_text = self.domain_explanation();
+        let wrapped_domain = Self::wrap_text(domain_text, inner_width.saturating_sub(2));
+        for line in &wrapped_domain {
+            if y >= area.height.saturating_sub(1) {
+                break;
+            }
+            Self::put_line(buf, area, y, &format!(" {line}"), UiStyle::TEXT_SECONDARY);
             y += 1;
         }
 
         if y < area.height.saturating_sub(1) {
-            Self::put_line(buf, area, y, &self.status_line(), UiStyle::TEXT_SECONDARY);
             y += 1;
         }
 
-        if y < area.height {
-            let bar_width = area.width.saturating_sub(4) as usize;
-            let filled = (self.readiness as usize * bar_width) / 100;
-            let empty = bar_width.saturating_sub(filled);
-            let bar = format!(" [{}{}]", "█".repeat(filled), "░".repeat(empty));
-            let bar_style = if self.readiness >= 75 {
-                UiStyle::OK
-            } else if self.readiness >= 40 {
+        if let Some(tip) = &self.tip {
+            let prefix = if self.hint_message.is_some() { "● Hint" } else { "● Tip" };
+            let tip_text = format!("{}: {}", prefix, tip);
+            let wrapped = Self::wrap_text(&tip_text, inner_width.saturating_sub(2));
+            let tip_style = if self.hint_message.is_some() {
                 UiStyle::WARNING
             } else {
-                UiStyle::MUTED
+                UiStyle::HIGHLIGHT
             };
-            Self::put_line(buf, area, y, &bar, bar_style);
+            for line in &wrapped {
+                if y >= area.height {
+                    break;
+                }
+                Self::put_line(buf, area, y, &format!(" {line}"), tip_style);
+                y += 1;
+            }
         }
     }
 }
-
-const EGG_FRAME_0: &[&str] = &[
-    "    ╭───╮    ",
-    "   ╱ ◉ ◉ ╲   ",
-    "  │  ···  │  ",
-    "  │  ☸    │  ",
-    "   ╲     ╱   ",
-    "    ╰───╯    ",
-];
-
-const EGG_FRAME_1: &[&str] = &[
-    "    ╭───╮    ",
-    "   ╱ ● ● ╲   ",
-    "  │  ···  │  ",
-    "  │    ☸  │  ",
-    "   ╲     ╱   ",
-    "    ╰───╯    ",
-];
-
-const HATCHLING_FRAME_0: &[&str] = &[
-    "     ∧∧      ",
-    "   ( ◉‿◉)    ",
-    "   /|☸ |\\   ",
-    "    | ☸|     ",
-    "    /  \\     ",
-];
-
-const HATCHLING_FRAME_1: &[&str] = &[
-    "     ∧∧      ",
-    "   ( ●‿●)    ",
-    "   /|  |\\   ",
-    "    |☸ |     ",
-    "    /  \\     ",
-];
-
-const JUVENILE_HAPPY_0: &[&str] = &[
-    "    ╱╲╱╲     ",
-    "   ( ◉ω◉)    ",
-    "  ╱|☸☸☸|╲   ",
-    "   |    |    ",
-    "   ╱╲  ╱╲    ",
-    "  ╱  ╲╱  ╲   ",
-];
-
-const JUVENILE_HAPPY_1: &[&str] = &[
-    "    ╱╲╱╲     ",
-    "   ( ◉ω◉) ♥  ",
-    "  ╱|☸☸☸|╲   ",
-    "   |    |    ",
-    "   ╱╲  ╱╲    ",
-    "  ╱  ╲╱  ╲   ",
-];
-
-const JUVENILE_SICK: &[&str] = &[
-    "    ╱╲╱╲     ",
-    "   ( ×_×)    ",
-    "  ╱|✖✖✖|╲   ",
-    "   | ~~ |    ",
-    "   ╱╲  ╱╲    ",
-    "  ╱  ╲╱  ╲   ",
-];
-
-const JUVENILE_EATING: &[&str] = &[
-    "    ╱╲╱╲     ",
-    "   ( ◉○◉)    ",
-    "  ╱|☸☸ |╲   ",
-    "   | ☸☸|    ",
-    "   ╱╲  ╱╲    ",
-    "  ╱  ╲╱  ╲   ",
-];
-
-const JUVENILE_IDLE_0: &[&str] = &[
-    "    ╱╲╱╲     ",
-    "   ( ◉_◉)    ",
-    "  ╱|☸☸ |╲   ",
-    "   |    |    ",
-    "   ╱╲  ╱╲    ",
-    "  ╱  ╲╱  ╲   ",
-];
-
-const JUVENILE_IDLE_1: &[&str] = &[
-    "    ╱╲╱╲     ",
-    "   ( ●_●)    ",
-    "  ╱|☸☸ |╲   ",
-    "   |    |    ",
-    "   ╱╲  ╱╲    ",
-    "  ╱  ╲╱  ╲   ",
-];
-
-const ADULT_HAPPY_0: &[&str] = &[
-    "   ╱☸╲╱☸╲    ",
-    "  ╱ ╱╲╱╲ ╲   ",
-    "  ( ◉ ω ◉ )  ",
-    " ╱|☸☸☸☸☸|╲  ",
-    "  | ◉API◉ |  ",
-    "  |  ETCD  |  ",
-    "  ╱╲ ☸☸ ╱╲   ",
-    " ╱  ╲──╱  ╲  ",
-];
-
-const ADULT_HAPPY_1: &[&str] = &[
-    "   ╱☸╲╱☸╲    ",
-    "  ╱ ╱╲╱╲ ╲   ",
-    "  ( ◉ ω ◉ )♥ ",
-    " ╱|☸☸☸☸☸|╲  ",
-    "  | ◉API◉ |  ",
-    "  |  ETCD  |  ",
-    "  ╱╲ ☸☸ ╱╲   ",
-    " ╱  ╲──╱  ╲  ",
-];
-
-const ADULT_SICK: &[&str] = &[
-    "   ╱✖╲╱✖╲    ",
-    "  ╱ ╱╲╱╲ ╲   ",
-    "  ( × _ × )  ",
-    " ╱|✖✖✖✖✖|╲  ",
-    "  |  ~~~~  |  ",
-    "  | CRASH! |  ",
-    "  ╱╲ ~~ ╱╲   ",
-    " ╱  ╲──╱  ╲  ",
-];
-
-const ADULT_EATING: &[&str] = &[
-    "   ╱☸╲╱☸╲    ",
-    "  ╱ ╱╲╱╲ ╲   ",
-    "  ( ◉ ○ ◉ )  ",
-    " ╱|☸☸☸☸☸|╲  ",
-    "  |  ☸☸☸  |  ",
-    "  | ☸ETCD☸|  ",
-    "  ╱╲ ☸☸ ╱╲   ",
-    " ╱  ╲──╱  ╲  ",
-];
-
-const ADULT_IDLE_0: &[&str] = &[
-    "   ╱☸╲╱☸╲    ",
-    "  ╱ ╱╲╱╲ ╲   ",
-    "  ( ◉ _ ◉ )  ",
-    " ╱|☸☸☸☸☸|╲  ",
-    "  | ◉API◉ |  ",
-    "  |  ETCD  |  ",
-    "  ╱╲ ☸☸ ╱╲   ",
-    " ╱  ╲──╱  ╲  ",
-];
-
-const ADULT_IDLE_1: &[&str] = &[
-    "   ╱☸╲╱☸╲    ",
-    "  ╱ ╱╲╱╲ ╲   ",
-    "  ( ● _ ● )  ",
-    " ╱|☸☸☸☸☸|╲  ",
-    "  | ◉API◉ |  ",
-    "  |  ETCD  |  ",
-    "  ╱╲ ☸☸ ╱╲   ",
-    " ╱  ╲──╱  ╲  ",
-];
