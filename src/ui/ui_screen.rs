@@ -13,6 +13,7 @@ use crate::app::engine::Engine;
 use super::{
     callback_registry::CallbackRegistry,
     constants::{UiStyle, centered_clamped_viewport},
+    effects::EffectEngine,
     learning_screen::LearningScreen,
     popup::PopupMessage,
     splash_screen::SplashScreen,
@@ -32,7 +33,9 @@ pub struct UiScreen {
     pub splash: SplashScreen,
     pub learning: LearningScreen,
     pub popup_stack: Vec<PopupMessage>,
+    pub effects: EffectEngine,
     callback_registry: CallbackRegistry,
+    splash_effects_triggered: bool,
 }
 
 impl UiScreen {
@@ -42,7 +45,9 @@ impl UiScreen {
             splash: SplashScreen::new(has_progress),
             learning: LearningScreen::new(initial_status),
             popup_stack: Vec::new(),
+            effects: EffectEngine::new(),
             callback_registry: CallbackRegistry::default(),
+            splash_effects_triggered: false,
         }
     }
 
@@ -54,12 +59,19 @@ impl UiScreen {
         self.popup_stack.pop();
     }
 
+    pub fn push_popup_with_effects(&mut self, popup: PopupMessage, area: Rect) {
+        self.popup_stack.push(popup);
+        self.effects.trigger_popup_open(area);
+    }
+
     pub fn has_popup(&self) -> bool {
         !self.popup_stack.is_empty()
     }
 
-    pub fn transition_to_learning(&mut self) {
+    pub fn transition_to_learning(&mut self, area: Rect) {
+        self.effects.trigger_screen_transition(area);
         self.state = ScreenState::Learning;
+        self.effects.trigger_screen_appear(area);
     }
 
     pub fn update(&mut self, engine: &Engine) -> Result<()> {
@@ -79,6 +91,13 @@ impl UiScreen {
         let area = centered_clamped_viewport(frame.area());
 
         let (body_area, footer_area, hover_area) = split_shell(area);
+
+        if !self.splash_effects_triggered && self.state == ScreenState::Splash {
+            self.splash_effects_triggered = true;
+            self.effects.trigger_splash_title(body_area);
+            self.effects.trigger_splash_subtitle(body_area);
+            self.effects.trigger_splash_menu(body_area);
+        }
 
         let mut ui_frame = UiFrame::new(frame, hover_area.unwrap_or(Rect::new(0, 0, 0, 0)), mouse_position);
         ui_frame.set_active_layer(if self.has_popup() { 1 } else { 0 });
@@ -108,6 +127,8 @@ impl UiScreen {
         if let Some(hover) = hover_area {
             render_hover_help(&mut ui_frame, hover);
         }
+
+        self.effects.process(ui_frame.buffer_mut(), area);
 
         self.callback_registry = ui_frame.into_registry();
 

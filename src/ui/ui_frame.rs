@@ -91,6 +91,10 @@ impl<'a, 'b> UiFrame<'a, 'b> {
         self.hover_text.as_deref()
     }
 
+    pub fn buffer_mut(&mut self) -> &mut ratatui::buffer::Buffer {
+        self.frame.buffer_mut()
+    }
+
     pub fn into_registry(self) -> CallbackRegistry {
         self.callback_registry
     }

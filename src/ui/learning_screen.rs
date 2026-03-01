@@ -13,8 +13,8 @@ use crate::content::command_info::command_blurb;
 use super::{
     button::Button,
     clickable_list::ClickableList,
-    cluster_view::ClusterView,
     constants::UiStyle,
+    tamagotchi::Tamagotchi,
     traits::Screen,
     ui_frame::UiFrame,
     ui_action::UiAction,
@@ -33,6 +33,7 @@ pub struct LearningScreen {
     pub hint_message: Option<String>,
     pub completion_card: Option<CompletionCard>,
     pub tab_index: usize,
+    pub tick: usize,
 }
 
 impl LearningScreen {
@@ -44,12 +45,14 @@ impl LearningScreen {
             hint_message: None,
             completion_card: None,
             tab_index: 0,
+            tick: 0,
         }
     }
 }
 
 impl Screen for LearningScreen {
     fn update(&mut self, _engine: &Engine) -> anyhow::Result<()> {
+        self.tick = self.tick.wrapping_add(1);
         Ok(())
     }
 
@@ -84,6 +87,8 @@ impl Screen for LearningScreen {
                 self.hint_message.as_deref(),
                 self.completion_card.as_ref(),
                 &self.status,
+                engine.readiness,
+                self.tick,
             );
         } else {
             render_main_feed(
@@ -405,6 +410,8 @@ fn render_activity_rail(
     hint_message: Option<&str>,
     completion_card: Option<&CompletionCard>,
     status: &str,
+    readiness: u8,
+    tick: usize,
 ) {
     let block = titled_block("Activity");
     let inner = block.inner(area);
@@ -412,8 +419,8 @@ fn render_activity_rail(
 
     let sections = Layout::vertical([Constraint::Min(6), Constraint::Length(6)]).split(inner);
 
-    let cluster = ClusterView::new("CLUSTER", "k8s", run_commands, run_commands.len());
-    frame.render_widget(cluster, sections[0]);
+    let tama = Tamagotchi::new(readiness, run_commands, tick);
+    frame.render_widget(tama, sections[0]);
 
     let (status_label, status_style) = status_badge(status);
     let mut lines = vec![Line::from(vec![
