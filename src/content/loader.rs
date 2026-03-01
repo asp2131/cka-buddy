@@ -204,11 +204,10 @@ fn parse_strict_blocks(raw: &str) -> Result<Vec<StrictBlock>> {
 }
 
 fn weight_from_type(meta: &HashMap<String, String>) -> u32 {
-    if let Some(raw) = meta.get("ready_weight") {
-        if let Ok(v) = raw.parse::<u32>() {
+    if let Some(raw) = meta.get("ready_weight")
+        && let Ok(v) = raw.parse::<u32>() {
             return v.max(1);
         }
-    }
 
     match meta.get("type").map(|s| s.as_str()) {
         Some("project") => 3,

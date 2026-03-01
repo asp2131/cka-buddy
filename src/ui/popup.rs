@@ -126,10 +126,15 @@ impl PopupMessage {
         let popup_rect = centered_rect(area, 70, 60);
 
         frame.render_widget(Clear, popup_rect);
+        frame.render_widget(
+            Block::default().style(ratatui::style::Style::default().bg(ratatui::style::Color::Rgb(14, 18, 28))),
+            popup_rect,
+        );
 
         let block = Block::bordered()
             .border_set(border::THICK)
-            .border_style(UiStyle::HIGHLIGHT);
+            .border_style(UiStyle::HIGHLIGHT)
+            .style(UiStyle::PANEL_BG);
 
         let inner = block.inner(popup_rect);
         frame.render_widget(block, popup_rect);
@@ -179,7 +184,7 @@ fn render_step_complete(
     readiness_after: u8,
 ) {
     let chunks = Layout::vertical([
-        Constraint::Length(2),
+        Constraint::Length(3),
         Constraint::Length(8),
         Constraint::Min(2),
         Constraint::Length(1),
@@ -187,11 +192,12 @@ fn render_step_complete(
     .split(area);
 
     let header = vec![
+        Line::from(""),
         Line::from(Span::styled(
-            " STEP COMPLETE ",
+            " ✓ STEP COMPLETE ",
             UiStyle::OK.add_modifier(Modifier::BOLD),
         )),
-        Line::from(Span::styled(format!(" {title}"), UiStyle::TEXT_PRIMARY)),
+        Line::from(Span::styled(format!("   {title}"), UiStyle::TEXT_PRIMARY)),
     ];
     frame.render_widget(Paragraph::new(header).centered(), chunks[0]);
 
@@ -201,7 +207,7 @@ fn render_step_complete(
     if !what_changed.is_empty() {
         body_lines.push(Line::from(Span::styled(
             " What changed:",
-            UiStyle::TEXT_SECONDARY,
+            UiStyle::TEXT_SECONDARY.add_modifier(Modifier::BOLD),
         )));
         for item in what_changed {
             body_lines.push(Line::from(vec![
@@ -214,11 +220,11 @@ fn render_step_complete(
         body_lines.push(Line::from(""));
         body_lines.push(Line::from(Span::styled(
             " Next suggested:",
-            UiStyle::TEXT_SECONDARY,
+            UiStyle::TEXT_SECONDARY.add_modifier(Modifier::BOLD),
         )));
         for cmd in next_commands {
             body_lines.push(Line::from(vec![
-                Span::raw("  "),
+                Span::styled("  ▸ ", UiStyle::HIGHLIGHT),
                 Span::styled(cmd.clone(), UiStyle::COMMAND),
             ]));
         }
@@ -240,17 +246,20 @@ fn render_step_complete(
 
 fn render_help(frame: &mut Frame, area: Rect, commands: &[(&str, &str)]) {
     let chunks = Layout::vertical([
-        Constraint::Length(2),
+        Constraint::Length(3),
         Constraint::Min(2),
         Constraint::Length(1),
     ])
     .split(area);
 
     frame.render_widget(
-        Paragraph::new(Line::from(Span::styled(
-            " COMMAND REFERENCE ",
-            UiStyle::HEADER.add_modifier(Modifier::BOLD),
-        )))
+        Paragraph::new(vec![
+            Line::from(""),
+            Line::from(Span::styled(
+                " ☸ COMMAND REFERENCE ",
+                UiStyle::HEADER.add_modifier(Modifier::BOLD),
+            )),
+        ])
         .centered(),
         chunks[0],
     );
@@ -259,6 +268,7 @@ fn render_help(frame: &mut Frame, area: Rect, commands: &[(&str, &str)]) {
     for (cmd, desc) in commands {
         lines.push(Line::from(vec![
             Span::styled(format!("  {cmd:<18}"), UiStyle::COMMAND),
+            Span::styled(" │ ", UiStyle::BORDER),
             Span::styled(*desc, UiStyle::TEXT_SECONDARY),
         ]));
     }
@@ -276,17 +286,20 @@ fn render_help(frame: &mut Frame, area: Rect, commands: &[(&str, &str)]) {
 
 fn render_verify_fail(frame: &mut Frame, area: Rect, message: &str) {
     let chunks = Layout::vertical([
-        Constraint::Length(2),
+        Constraint::Length(3),
         Constraint::Min(2),
         Constraint::Length(1),
     ])
     .split(area);
 
     frame.render_widget(
-        Paragraph::new(Line::from(Span::styled(
-            " NOT YET ",
-            UiStyle::WARNING.add_modifier(Modifier::BOLD),
-        )))
+        Paragraph::new(vec![
+            Line::from(""),
+            Line::from(Span::styled(
+                " ✖ NOT YET ",
+                UiStyle::WARNING.add_modifier(Modifier::BOLD),
+            )),
+        ])
         .centered(),
         chunks[0],
     );
@@ -294,7 +307,10 @@ fn render_verify_fail(frame: &mut Frame, area: Rect, message: &str) {
     frame.render_widget(
         Paragraph::new(vec![
             Line::from(""),
-            Line::from(Span::styled(format!("  {message}"), UiStyle::TEXT_PRIMARY)),
+            Line::from(vec![
+                Span::styled("  ▸ ", UiStyle::WARNING),
+                Span::styled(message.to_string(), UiStyle::TEXT_PRIMARY),
+            ]),
             Line::from(""),
             Line::from(Span::styled(
                 "  Review the step objective and try again.",
@@ -323,20 +339,28 @@ fn render_tutorial(
     content: &[(String, Vec<String>)],
 ) {
     let chunks = Layout::vertical([
-        Constraint::Length(2),
+        Constraint::Length(3),
         Constraint::Min(2),
         Constraint::Length(1),
     ])
     .split(area);
 
     if let Some((title, _)) = content.get(page) {
-        let header = Line::from(vec![
-            Span::styled(
-                format!(" {title} "),
-                UiStyle::HEADER.add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(format!("[{}/{}]", page + 1, total_pages), UiStyle::MUTED),
-        ]);
+        let progress_dots: String = (0..total_pages)
+            .map(|i| if i == page { "●" } else { "○" })
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        let header = vec![
+            Line::from(""),
+            Line::from(vec![
+                Span::styled(
+                    format!(" ☸ {title} "),
+                    UiStyle::HEADER.add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(format!(" {progress_dots} "), UiStyle::MUTED),
+            ]),
+        ];
         frame.render_widget(Paragraph::new(header).centered(), chunks[0]);
     }
 
@@ -349,9 +373,9 @@ fn render_tutorial(
     }
 
     let nav_hint = if page + 1 >= total_pages {
-        "Press Enter to start"
+        "Press Enter to start ▸"
     } else {
-        "← → Navigate • Enter to skip"
+        "← → Navigate │ Enter to skip"
     };
     frame.render_widget(
         Paragraph::new(Line::from(Span::styled(nav_hint, UiStyle::MUTED))).centered(),

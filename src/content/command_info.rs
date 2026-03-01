@@ -30,11 +30,10 @@ pub fn command_blurb(cmd: &str) -> &'static str {
     let subcommand = parts[1];
 
     // If there's a resource type (e.g. "kubectl get pods"), check it
-    if parts.len() >= 3 {
-        if let Some(blurb) = resource_blurb(parts[2]) {
+    if parts.len() >= 3
+        && let Some(blurb) = resource_blurb(parts[2]) {
             return blurb;
         }
-    }
 
     // Match on kubectl subcommand
     subcommand_blurb(subcommand)

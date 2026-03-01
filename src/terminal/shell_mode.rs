@@ -259,11 +259,10 @@ fn resolve_terminal_executable(terminal_override: Option<String>) -> Result<Stri
         return Ok(exe.to_string());
     }
 
-    if let Ok(exe) = env::var("CKA_BUDDY_TERMINAL") {
-        if !exe.trim().is_empty() {
+    if let Ok(exe) = env::var("CKA_BUDDY_TERMINAL")
+        && !exe.trim().is_empty() {
             return Ok(exe);
         }
-    }
 
     let candidates = [
         "ghostty",
