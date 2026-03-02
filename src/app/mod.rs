@@ -338,6 +338,22 @@ fn run_loop(
                 ui.learning.hint_message = None;
                 ui.learning.completion_card = None;
             }
+            UiAction::CopyPairingCommand => {
+                if let Some(cmd) = shell.external_connect_command() {
+                    let clean_cmd = cmd.split("  #").next().unwrap_or(&cmd).trim().to_string();
+                    match crate::terminal::clipboard::copy_to_clipboard_osc52(&clean_cmd) {
+                        Ok(()) => {
+                            ui.learning.status = "Pairing command copied to clipboard".to_string();
+                            ui.learning.output_log.push(format!("Copied: {clean_cmd}"));
+                        }
+                        Err(e) => {
+                            ui.learning.status = format!("Failed to copy: {e}");
+                        }
+                    }
+                } else {
+                    ui.learning.status = "No pairing command available (use /shell external first)".to_string();
+                }
+            }
             UiAction::ForceRunCommand(raw_cmd) => {
                 engine.record_attempt();
                 match evaluate_command(&raw_cmd) {

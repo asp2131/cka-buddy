@@ -134,6 +134,7 @@ impl Screen for LearningScreen {
                         "/verify" => UiAction::Verify,
                         "/hint" => UiAction::Hint,
                         "/suggest" => UiAction::Suggest(parts.next().and_then(|n| n.parse().ok())),
+                        "/copy" => UiAction::CopyPairingCommand,
                         "/clear" => UiAction::ClearLog,
                         "/help" => UiAction::ShowHelp,
                         "/shell" => match parts.next() {
@@ -437,8 +438,13 @@ fn render_action_row(frame: &mut UiFrame<'_, '_>, area: Rect, enable_hotkeys: bo
         return;
     }
 
-    let rows = Layout::horizontal([Constraint::Length(14), Constraint::Length(12), Constraint::Min(0)])
-        .split(area);
+    let rows = Layout::horizontal([
+        Constraint::Length(14),
+        Constraint::Length(12),
+        Constraint::Length(12),
+        Constraint::Min(0),
+    ])
+    .split(area);
 
     let verify = {
         let b = Button::new("Verify").on_click(UiAction::Verify).hover_text(Text::from("Run verification checks"));
@@ -450,8 +456,13 @@ fn render_action_row(frame: &mut UiFrame<'_, '_>, area: Rect, enable_hotkeys: bo
         if enable_hotkeys { b.hotkey(KeyCode::Char('h')) } else { b }
     };
 
+    let copy = Button::new("Copy")
+        .on_click(UiAction::CopyPairingCommand)
+        .hover_text(Text::from("Copy pairing command to clipboard"));
+
     frame.render_interactive_widget(verify, rows[0]);
     frame.render_interactive_widget(hint, rows[1]);
+    frame.render_interactive_widget(copy, rows[2]);
 }
 
 fn render_command_bar(frame: &mut UiFrame<'_, '_>, area: Rect, command_input: &str, status: &str) {

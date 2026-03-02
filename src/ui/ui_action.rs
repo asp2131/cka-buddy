@@ -19,4 +19,5 @@ pub enum UiAction {
     SetCommandInput(String),
     RunCommand(String),
     ForceRunCommand(String),
+    CopyPairingCommand,
 }

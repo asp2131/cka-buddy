@@ -48,6 +48,7 @@ impl PopupMessage {
                 ("/shell", "Show current shell mode"),
                 ("/shell embedded", "Use embedded PTY runner"),
                 ("/shell external", "Pair to one external terminal via PIN command"),
+                ("/copy", "Copy pairing command to clipboard"),
                 ("/quit", "Save progress and exit"),
                 ("Ctrl+C", "Quick quit from anywhere"),
             ],
